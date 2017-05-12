@@ -1,0 +1,7 @@
+#ifndef CONFIG_HPP_INCLUDED
+#define CONFIG_HPP_INCLUDED
+
+#define VERSION_MAJOR (0)
+#define VERSION_MINOR (1)
+
+#endif
