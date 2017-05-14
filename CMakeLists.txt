@@ -25,7 +25,7 @@ file(GLOB HEADER_FILES include/*.hpp)
 add_executable(bgp src/main.cpp)
 
 target_include_directories(bgp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(bgp ${LIBBGPSTREAM_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
+target_link_libraries(bgp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
 
 # add both bgpstream tutorial projects & rtrclient
 add_executable(bgpstream-tutorial tutorials/bgpstream-tutorial.c)

@@ -1,19 +1,20 @@
 #include <iostream>
 #include <chrono>
 #include <ctime>
+#include <thread>
 
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
 #include "bgp/bgp.hpp"
+#include "rtr/rtr.hpp"
 
 #include "util/program_options.hpp"
 
 #include "config.hpp"
 
 using util::ProgramOptions;
-using BGP::Stream;
 
 int main(int argc, char** argv) {
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
@@ -22,7 +23,8 @@ int main(int argc, char** argv) {
 
     if (auto ret = opts.exit()) return *ret;
 
-    Stream stream;
+    RTR::Manager mtr;
+    BGP::Stream stream;
 
     // Set from 1 minutes ago to live mode
     stream.add_interval(std::chrono::system_clock::now() - std::chrono::minutes(10));
@@ -33,6 +35,8 @@ int main(int argc, char** argv) {
     if (auto project_filters = opts.project_filters())
         for (auto &p : *project_filters)
             stream.add_filter(BGP::Filter::Project, p);
+    else
+        stream.add_filter(BGP::Filter::Project, "routeviews"); // add standard filter
 
     if (auto collector_filters = opts.collector_filters())
         for (auto &c : *collector_filters)
@@ -41,6 +45,11 @@ int main(int argc, char** argv) {
     // Start the stream
     stream.start();
 
+    // Start MTRlib
+    mtr.start();
+
+    int count = 0;
+    
     while (auto record = stream.next()) {
         auto r = *record;
 
@@ -56,6 +65,8 @@ int main(int argc, char** argv) {
         if (r.status() == BGP::Record::Status::Valid) {
             while (auto element = (*record).next()) {
 
+                count++;
+                
                 std::cout
                     << r.dump_type() << "|"
                     << (*element).type() << "|"
@@ -64,7 +75,11 @@ int main(int argc, char** argv) {
                     << std::endl;
             }
         }
+
+        if (count > 1000) break;
     }
+
+    mtr.stop();
 
     return 0;
 }
