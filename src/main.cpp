@@ -14,6 +14,7 @@ int main(void) {
 
 
     boost::log::core::get()->set_filter(boost::log::trivial::severity
+                                        // >= boost::log::trivial::debug);
                                         // >= boost::log::trivial::info);
                                         >= boost::log::trivial::warning);
                                         //>= boost::log::trivial::trace);
@@ -55,25 +56,10 @@ int main(void) {
         if (r.status() == BGP::Record::Status::Valid) {
             while (auto element = (*record).next()) {
 
-                char elem_type;
-
-                switch ((*element).type()) {
-                        case BGP::Element::Type::RIB:
-                            elem_type = 'R'; break;
-                        case BGP::Element::Type::Announcement:
-                            elem_type = 'A'; break;
-                        case BGP::Element::Type::Withdrawal:
-                            elem_type = 'W'; break;
-                        case BGP::Element::Type::PeerState:
-                            elem_type = 'S'; break;
-                        default:
-                            elem_type = '?';
-                };
-
                 std::cout
-                    << ((*record).dump_type() ? "R" : "U") << "|"
-                    << elem_type << "|"
-                    << *record << "|"
+                    << r.dump_type() << "|"
+                    << (*element).type() << "|"
+                    << r << "|"
                     << *element
                     << std::endl;
             }

@@ -22,7 +22,7 @@ namespace BGP {
     class Element {
     public:
 
-        enum Type {
+        enum class Type {
             Unknown = BGPSTREAM_ELEM_TYPE_UNKNOWN,
             RIB = BGPSTREAM_ELEM_TYPE_RIB,
             Announcement = BGPSTREAM_ELEM_TYPE_ANNOUNCEMENT,
@@ -61,6 +61,18 @@ namespace BGP {
         os << e.as_string();
         return os;
     }
+
+    std::ostream& operator<<(std::ostream& os, const Element::Type& type) {
+        switch (type) {
+        case BGP::Element::Type::RIB: os << 'R'; break;
+        case BGP::Element::Type::Announcement: os << 'A'; break;
+        case BGP::Element::Type::Withdrawal: os << 'W'; break;
+        case BGP::Element::Type::PeerState: os << 'S'; break;
+        default: os << '?'; break;
+        };
+        return os;
+    }
+
 }
 
 #endif

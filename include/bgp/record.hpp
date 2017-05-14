@@ -22,7 +22,7 @@ namespace BGP {
     class Record {
 
     public:
-        enum Status {
+        enum class Status {
             // The record is valid and may be used.
             Valid = BGPSTREAM_RECORD_STATUS_VALID_RECORD,
             // Source is not empty, but no valid record was found.
@@ -35,14 +35,14 @@ namespace BGP {
             CorruptedRecord = BGPSTREAM_RECORD_STATUS_CORRUPTED_RECORD
         };
 
-        enum DumpType {
+        enum class DumpType {
             // The record contains data for a BGP Update message.
             Update = BGPSTREAM_UPDATE, // (0)
             // The record contains data for a BGP RIB message.
             RIB = BGPSTREAM_RIB // (1)
         };
 
-        enum Position {
+        enum class Position {
             //This is the first record of the dump.
             Start = BGPSTREAM_DUMP_START,
             // This is a record in the middle of the dump, i.e. not
@@ -120,6 +120,37 @@ namespace BGP {
         os << e.record_time() << "|"
            << e.project() << "|"
            << e.collector();
+        return os;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const Record::Position& dump_pos) {
+        switch (dump_pos) {
+        case Record::Position::Start: os << 'S'; break;
+        case Record::Position::Middle: os << 'M'; break;
+        case Record::Position::End: os << 'E'; break;
+        default: os << '?';
+        }
+        return os;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const Record::DumpType& dump_type) {
+        switch (dump_type) {
+        case Record::DumpType::Update: os << 'U'; break;
+        case Record::DumpType::RIB: os << 'R'; break;
+        default: os << '?';
+        }
+        return os;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const Record::Status& status) {
+        switch (status) {
+        case Record::Status::Valid: os << "valid"; break;
+        case Record::Status::FilteredSource: os << "filtered source"; break;
+        case Record::Status::EmptySource: os << "empty source"; break;
+        case Record::Status::CorruptedSource: os << "corrupted source"; break;
+        case Record::Status::CorruptedRecord: os << "corrupted record"; break;
+        default: os << "invalid status";
+        }
         return os;
     }
 
