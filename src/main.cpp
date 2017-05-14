@@ -8,19 +8,21 @@
 
 #include "bgp/bgp.hpp"
 
+#include "util/program_options.hpp"
+
 #include "config.hpp"
 
-int main(void) {
+using util::ProgramOptions;
+using BGP::Stream;
 
+int main(int argc, char** argv) {
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
 
-    boost::log::core::get()->set_filter(boost::log::trivial::severity
-                                        // >= boost::log::trivial::debug);
-                                        // >= boost::log::trivial::info);
-                                        >= boost::log::trivial::warning);
-                                        //>= boost::log::trivial::trace);
+    ProgramOptions opts(argc, argv);
 
+    if (auto ret = opts.exit()) return *ret;
 
-    BGP::Stream stream;
+    Stream stream;
 
     // Set from 1 minutes ago to live mode
     stream.add_interval(std::chrono::system_clock::now() - std::chrono::minutes(10));
@@ -28,18 +30,16 @@ int main(void) {
     // Sun, 10 Oct 2010 10:10:10 GMT -  Sun, 10 Oct 2010 11:11:11 GMT
     // stream.add_interval(1286705410, 1286709071);
 
-    stream.add_filter(BGP::Filter::Collector, "rrc01");
-    stream.add_filter(BGP::Filter::Collector, "rrc02");
-    stream.add_filter(BGP::Filter::Collector, "rrc03");
-    stream.add_filter(BGP::Filter::Collector, "rrc04");
-    stream.add_filter(BGP::Filter::Collector, "rrc05");
-    stream.add_filter(BGP::Filter::Collector, "rrc06");
-    stream.add_filter(BGP::Filter::Project, "ris");
-    stream.add_filter(BGP::Filter::RecordType, "updates");
+    if (auto project_filters = opts.project_filters())
+        for (auto &p : *project_filters)
+            stream.add_filter(BGP::Filter::Project, p);
+
+    if (auto collector_filters = opts.collector_filters())
+        for (auto &c : *collector_filters)
+            stream.add_filter(BGP::Filter::Collector, c);
 
     // Start the stream
     stream.start();
-
 
     while (auto record = stream.next()) {
         auto r = *record;
