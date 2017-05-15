@@ -130,24 +130,45 @@
       R|R|1494720000|ris|rrc00|8758|212.25.27.44|1.1.251.0/24|212.25.27.44|8758 8220 38040 23969|23969|8220:65010 8220:65401 8758:110 8758:300||
       R|R|1494720000|ris|rrc00|4608|203.119.76.5|1.1.251.0/24|203.119.76.5|4608 1221 4637 3491 38040 23969|23969|||
       ...
-    }
     \end{lstlisting}
   \end{itemize}
 \end{frame}
+
+\begin{frame}[fragile]{RTRLib}
+
+  %You can create overlays\dots
+  \begin{itemize}
+  \item
+    A C implementation of the RPKI/Router Protocol client
+    \begin{itemize}
+    \item
+      API for C
+    \item
+      can verify announcements (IP/prefix <-> ASN) against a RPKI-RTR cache server
+    \end{itemize}
+  \item
+    e.g. IP / prefix length / ASN relation
+    \begin{lstlisting}[language=sh]%[mathescape=false]
+      + 116.197.131.0                               24 -  24        58369
+      + 84.20.48.0                                  21 -  21         6830
+      + 31.47.192.0                                 21 -  24        49800
+      ...
+    \end{lstlisting}
+  \end{itemize}
+\end{frame}
+
 
 \section{To do}
 
 \begin{frame}{Our Contribution}
 
   \begin{itemize}
-  \item
-    We need to implement an application to analyze, filter, and visualize data according to different parameters.
-    \begin{itemize}
-    \item
-      maybe with C/C++ and gnuplot
-    \end{itemize}
-  \item
-    Can we detect blackholed or intercepted traffic?
+    \item We need to implement an application to filter, analyze and visualize data according to different parameters.
+    \item Implemented in C++
+    \item Presentation on console (ncurses, like htop)  
+    \item Show coverage of ROAs
+    \item Detect BGP prefix hijacking (how often?, how long?)
   \end{itemize}
+    
 \end{frame}
 \end{document}
