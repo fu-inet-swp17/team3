@@ -28,9 +28,9 @@ target_include_directories(bgp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(bgp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
 
 # add both bgpstream tutorial projects & rtrclient
-add_executable(bgpstream-tutorial tutorials/bgpstream-tutorial.c)
-add_executable(bgpstream-pfx-mon tutorials/bgpstream-tutorial.c)
-add_executable(rtrclient tutorials/rtrclient.c)
+add_executable(bgpstream-tutorial misc/tutorials/bgpstream-tutorial.c)
+add_executable(bgpstream-pfx-mon misc/tutorials/bgpstream-tutorial.c)
+add_executable(rtrclient misc/tutorials/rtrclient.c)
 
 target_link_libraries(bgpstream-tutorial ${LIBBGPSTREAM_LIBRARIES})
 target_link_libraries(bgpstream-pfx-mon ${LIBBGPSTREAM_LIBRARIES})
