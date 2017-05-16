@@ -2,6 +2,8 @@
 #define BGPELEMENT_HPP_INCLUDED
 
 #include <iostream>
+#include <utility>
+#include <list>
 
 extern "C" {
 #include "bgpstream_elem.h"
@@ -18,7 +20,7 @@ using std::experimental::optional;
 namespace BGP {
 
     typedef std::unique_ptr<bgpstream_elem_t, void(*)(bgpstream_elem_t*)> unique_elem_ptr;
-    
+
     class Element {
     public:
 
@@ -29,7 +31,19 @@ namespace BGP {
             Withdrawal = BGPSTREAM_ELEM_TYPE_WITHDRAWAL,
             PeerState = BGPSTREAM_ELEM_TYPE_PEERSTATE
         };
-        
+
+        enum class PeerState {
+            Unknown = BGPSTREAM_ELEM_PEERSTATE_UNKNOWN,
+            Idle = BGPSTREAM_ELEM_PEERSTATE_IDLE,
+            Connect = BGPSTREAM_ELEM_PEERSTATE_CONNECT,
+            Active = BGPSTREAM_ELEM_PEERSTATE_ACTIVE,
+            OpenSent = BGPSTREAM_ELEM_PEERSTATE_OPENSENT,
+            OpenConfirm = BGPSTREAM_ELEM_PEERSTATE_OPENCONFIRM,
+            Established = BGPSTREAM_ELEM_PEERSTATE_ESTABLISHED,
+            Clearing = BGPSTREAM_ELEM_PEERSTATE_CLEARING,
+            Deleted = BGPSTREAM_ELEM_PEERSTATE_DELETED
+        };
+
         Element(unique_elem_ptr& elem_ptr) : elem(std::move(elem_ptr)) {
             BOOST_LOG_TRIVIAL(trace) << "BGP::Element::Element()";
         }
@@ -37,7 +51,47 @@ namespace BGP {
         Element::Type type(void) {
             return Element::Type(elem->type);
         }
-        
+
+        std::time_t timestamp(void) {
+            return static_cast<std::time_t>(elem->timestamp);
+        }
+
+        std::uint32_t peer_asnumber(void) {
+            return elem->peer_asnumber;
+        }
+
+        std::pair<PeerState, PeerState> peer_state(void) {
+            return std::pair<PeerState, PeerState>(Element::PeerState(elem->old_state),
+                                                   Element::PeerState(elem->new_state));
+        }
+
+        bgpstream_addr_storage_t peer_address(void) {
+            return elem->peer_address;
+        }
+
+        bgpstream_addr_storage_t next_hop(void) {
+            return elem->nexthop;
+        }
+
+        bgpstream_pfx_storage_t prefix(void) {
+            return elem->prefix;
+        }
+
+        std::list<uint32_t> as_path(void) {
+            bgpstream_as_path_iter_t it;
+            bgpstream_as_path_iter_reset(&it);
+
+            std::list<uint32_t> path;
+
+            while (auto seg = bgpstream_as_path_get_next_seg(elem->aspath, &it)) {
+                // FIXME: figure out what the other types mean
+                if (seg->type == BGPSTREAM_AS_PATH_SEG_ASN)
+                    path.push_back(reinterpret_cast<bgpstream_as_path_seg_asn_t *>(seg)->asn);
+            }
+
+            return path;
+        }
+
         // Return bgpstream string representation
         std::string as_string(void) {
 
