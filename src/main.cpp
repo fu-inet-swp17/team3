@@ -6,9 +6,6 @@
 #include <string>
 #include <sstream>
 
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
@@ -16,37 +13,13 @@
 #include "bgp/bgp.hpp"
 #include "rtr/rtr.hpp"
 
+#include "util/formatters.hpp"
 #include "util/program_options.hpp"
+#include "util/stream_initializer.hpp"
 
 #include "config.hpp"
 
 using util::ProgramOptions;
-
-// FIXME: move into util
-std::string format_ip(const bgpstream_addr_storage_t& addr) {
-    char buf[INET6_ADDRSTRLEN] = {0};
-
-    if (addr.version == BGPSTREAM_ADDR_VERSION_IPV4) {
-        inet_ntop(AF_INET, &addr.ipv4, (char*)&buf[0], sizeof buf);
-    }
-    else if (addr.version == BGPSTREAM_ADDR_VERSION_IPV6) {
-        inet_ntop(AF_INET6, &addr.ipv6, &buf[0], sizeof buf);
-    }
-    else {
-        return " -- malformed ip -- ";
-    }
-
-    return std::string(buf);
-}
-
-// FIXME: move into util
-std::string format_prefix(const bgpstream_pfx_storage_t& pfx) {
-    std::stringstream ss;
-
-    ss << format_ip(pfx.address) << "/" << std::to_string(pfx.mask_len);
-
-    return ss.str();
-}
 
 int main(int argc, char** argv) {
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
@@ -55,25 +28,14 @@ int main(int argc, char** argv) {
 
     if (auto ret = opts.exit()) return *ret;
 
+    // Create a stream from the supplied options
+    //BGP::Stream stream = util::stream_from_options(opts);
+
+    // Start an example live stream
+    BGP::Stream stream = util::example_live_stream();
+
     RTR::Manager mtr;
-    BGP::Stream stream;
-
-    // Set from 10 minutes ago to live mode
-    stream.add_interval(std::chrono::system_clock::now() - std::chrono::minutes(10));
-
-    // Sun, 10 Oct 2010 10:10:10 GMT -  Sun, 10 Oct 2010 11:11:11 GMT
-    // stream.add_interval(1286705410, 1286709071);
-
-    if (auto project_filters = opts.project_filters())
-        for (auto &p : *project_filters)
-            stream.add_filter(BGP::Filter::Project, p);
-    else
-        stream.add_filter(BGP::Filter::Project, "ris"); // add standard filter
-
-    if (auto collector_filters = opts.collector_filters())
-        for (auto &c : *collector_filters)
-            stream.add_filter(BGP::Filter::Collector, c);
-
+    
     // Start the stream
     stream.start();
 
@@ -118,7 +80,7 @@ int main(int argc, char** argv) {
                 std::cout
                     << " [" << std::put_time(std::gmtime(&tm), "%F %T") << "] "
                     << "[AS" << e.peer_asnumber() << " "
-                    << format_ip(e.peer_address()) << "] ";
+                    << util::format_ip(e.peer_address()) << "] ";
 
                 bool do_prefix = true;
                 bool do_path = false;
@@ -145,12 +107,12 @@ int main(int argc, char** argv) {
 
                 // Print announced/withdrawn prefix
                 if (do_prefix) {
-                    std::cout << "prefix: " << format_prefix(e.prefix()) << " ";
+                    std::cout << "prefix: " << util::format_prefix(e.prefix()) << " ";
                 }
 
                 // Print announced AS path
                 if (do_path) {
-                    std::cout << "next hop: " << format_ip(e.next_hop()) << " via path:";
+                    std::cout << "next hop: " << util::format_ip(e.next_hop()) << " via path:";
 
                     for (uint32_t asn : e.as_path()) {
                         std::cout << " " << asn;
