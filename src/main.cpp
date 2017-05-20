@@ -40,8 +40,10 @@ int main(int argc, char** argv) {
     stream.start();
 
     // Start MTRlib
-    // mtr.start();
+    mtr.start();
 
+    std::cout << "Fetching data..." << std::endl;
+    
     while (auto record = stream.next()) {
         auto r = *record;
 
@@ -56,8 +58,12 @@ int main(int argc, char** argv) {
 
         if (r.status() == BGP::Record::Status::Valid) {
 
+            int i = 1;
+            
             while (auto element = (*record).next()) {
 
+                std::cout << r.collector() << ": ";
+                
                 // Print Record dump type ('U'pdate or 'R'IB)
                 switch (r.dump_type()) {
                 case BGP::Record::DumpType::Update:
@@ -70,12 +76,14 @@ int main(int argc, char** argv) {
                     std::cout << "?";
                 }
 
+                std::cout << i++;
+                
                 // Get element from optional<Element>
                 auto e = *element;
 
                 // Get timestamp of element
                 auto tm = e.timestamp();
-
+                
                 // [<date time>] [AS xxx aaa.bbb.ccc.ddd]
                 std::cout
                     << " [" << std::put_time(std::gmtime(&tm), "%F %T") << "] "
@@ -105,17 +113,37 @@ int main(int argc, char** argv) {
 
                 std::cout << " ";
 
+                auto pfx = e.prefix();
+                
                 // Print announced/withdrawn prefix
                 if (do_prefix) {
-                    std::cout << "prefix: " << util::format_prefix(e.prefix()) << " ";
+                    std::cout << "prefix: " << util::format_prefix(pfx) << " ";
                 }
 
                 // Print announced AS path
                 if (do_path) {
                     std::cout << "next hop: " << util::format_ip(e.next_hop()) << " via path:";
 
+                    uint32_t origin;
+                    
                     for (uint32_t asn : e.as_path()) {
                         std::cout << " " << asn;
+                        origin = asn;
+                    }
+
+                    // Try verification
+                    lrtr_ip_addr addr;
+                    lrtr_ip_str_to_addr(util::format_ip(pfx.address).c_str(), &addr);
+
+                    int rtr_res = mtr.validate(origin, &addr, pfx.mask_len);
+
+                    std::cout << " rtr: ";
+                
+                    switch (rtr_res) {
+                    case 2: std::cout << "\x1b[1;31mINVALID\x1b[0m"; break;
+                    case 1: std::cout << "\x1b[1;33mNOT FOUND\x1b[0m"; break;
+                    case 0: std::cout << "\x1b[1;32mVERIFIED\x1b[0m" ; break;
+                    case -1: std::cout << "\x1b[1;31mERROR\x1b[0m"; break;
                     }
                 }
 
