@@ -43,6 +43,7 @@ namespace BGP {
 
     private:
         std::unique_ptr<bgpstream_t, void(*)(bgpstream_t*)> stream;
+        bgpstream_data_interface_id_t if_id;
         bool started = false;
         
     public:
@@ -53,8 +54,47 @@ namespace BGP {
                 // libbgpstream couldn't allocate memory
                 throw bad_alloc();
             }
+
+            if_id = bgpstream_get_data_interface_id(stream.get());
         }
 
+        // Set the data interface by name ('singlefile', 'csvfile', etc.)
+        void set_interface(const std::string& if_name) {
+            
+            bgpstream_data_interface_id_t new_if_id =
+                bgpstream_get_data_interface_id_by_name(stream.get(), if_name.c_str());
+
+            // data interface not known by libbgpstream
+            if (!new_if_id) {
+                throw config_error();
+            }
+
+            // set new data interface id
+            bgpstream_set_data_interface(stream.get(), new_if_id);
+
+            // update member
+            if_id = bgpstream_get_data_interface_id(stream.get());
+        }
+
+        // Get a string representation of the currently set data interface
+        std::pair<std::string, std::string> get_interface(void) {
+            bgpstream_data_interface_info_t* if_info =
+                bgpstream_get_data_interface_info(stream.get(), if_id);
+
+            return std::make_pair<std::string, std::string>(std::string(if_info->name),
+                                                            std::string(if_info->description));
+        }
+
+        void set_interface_option(const std::string& opt_name, const std::string& opt_value) {
+            bgpstream_data_interface_option_t* opt_type =
+                bgpstream_get_data_interface_option_by_name(stream.get(), if_id, opt_name.c_str());
+
+            if (opt_type)
+                bgpstream_set_data_interface_option(stream.get(), opt_type, opt_value.c_str());
+            else
+                throw config_error();
+        }
+        
         void add_filter(Filter filter_type, std::string filter_value) {
             if (started) {
                 // don't allow filter changes while running
