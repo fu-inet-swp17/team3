@@ -162,23 +162,30 @@ namespace BGP {
             started = true;
         }
 
+        // Faster than the other next(), allows reusing a single Record
+        bool next(Record& r) {
+
+            // Stream can access r.record because it's a friend of Record
+            int ret = bgpstream_get_next_record(stream.get(), r.record.get());
+
+            if (ret > 0)
+                // Record updated
+                return true;
+            else
+                // End-of-stream
+                return false;
+        }
+
+        // Higher abstraction interface, user the other next() to avoid allocations
         optional<Record> next() {
-            BOOST_LOG_TRIVIAL(trace) << "BGP::Stream::next()";
 
-            auto record_ptr = unique_record_ptr(bgpstream_record_create(), bgpstream_record_destroy);
+            Record r;
 
-            int ret = bgpstream_get_next_record(stream.get(), record_ptr.get());
-            
-            if (ret > 0) {
-                return Record(record_ptr);;
-            }
-            else if (ret == 0) {
-                // end-of-stream reached
+            if (next(r))
+                // Move temporary Record into optional
+                return std::move(r);
+            else
                 return {};
-            }
-            else {
-                throw exception();
-            }
         }
     };
 }
