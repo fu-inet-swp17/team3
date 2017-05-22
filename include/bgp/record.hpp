@@ -8,6 +8,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "bgp/element.hpp"
+#include "bgp/stream.hpp"
 
 extern "C" {
 #include "bgpstream_record.h"
@@ -19,7 +20,11 @@ namespace BGP {
 
     typedef std::unique_ptr<bgpstream_record_t, void(*)(bgpstream_record_t*)> unique_record_ptr;
 
+    class Stream;
+
     class Record {
+
+        friend class BGP::Stream;
 
     public:
         enum class Status {
@@ -52,11 +57,8 @@ namespace BGP {
             End = BGPSTREAM_DUMP_END
         };
         
-        // create from Record object from a unique_ptr reference, it's
-        // custom deleter will be picked up.
-        Record(unique_record_ptr& record_ptr) : record(std::move(record_ptr)) {
-            BOOST_LOG_TRIVIAL(trace) << "BGP::Record::Record()";
-        }
+        // Default constructor
+        Record(void) : record(bgpstream_record_create(), bgpstream_record_destroy) { /* */ }
 
         Record::Status status(void) {
             return Record::Status(record->status);
@@ -111,9 +113,9 @@ namespace BGP {
                 return {};
             }
         }
-
+                
     private:
-        std::shared_ptr<bgpstream_record_t> record;
+        unique_record_ptr record;
     };
 
     std::ostream& operator<<(std::ostream& os, Record& e) {
