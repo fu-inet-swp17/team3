@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     std::cout << "Fetching data..." << std::endl;
     
     while (auto record = stream.next()) {
-        auto r = *record;
+        BGP::Record r = std::move(*record); // *record is invalid after this!
 
         BOOST_LOG_TRIVIAL(debug)
             << "[record] "
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
 
             int i = 1;
             
-            while (auto element = (*record).next()) {
+            while (auto element = r.next()) {
 
                 std::cout << r.collector() << ": ";
                 
