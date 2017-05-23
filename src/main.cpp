@@ -28,24 +28,31 @@ int main(int argc, char** argv) {
 
     if (auto ret = opts.exit()) return *ret;
 
-    // Create a stream from the supplied options
-    //BGP::Stream stream = util::stream_from_options(opts);
+    bool rtr = false;
 
-    // Start an example live stream
-    BGP::Stream stream = util::example_live_stream();
-
+    BGP::Stream stream;
     RTR::Manager mtr;
-    
+
+    if (argc > 1) {
+        // Create a stream from the supplied options
+        stream = util::stream_from_options(opts);
+    } else {
+        // Start an example live stream
+        stream = util::example_live_stream();
+        rtr = true;
+    }
+
     // Start the stream
     stream.start();
 
-    // Start MTRlib
-    mtr.start();
+    // Start RTRlib
+    if (rtr) mtr.start();
 
     std::cout << "Fetching data..." << std::endl;
-    
-    while (auto record = stream.next()) {
-        BGP::Record r = std::move(*record); // *record is invalid after this!
+
+    BGP::Record r;
+
+    while (stream.next(r)) {
 
         BOOST_LOG_TRIVIAL(debug)
             << "[record] "
@@ -59,11 +66,13 @@ int main(int argc, char** argv) {
         if (r.status() == BGP::Record::Status::Valid) {
 
             int i = 1;
-            
-            while (auto element = r.next()) {
+
+            for (auto it = r.begin(); it != r.end(); ++it) {
+
+                BGP::Element& e = *it;
 
                 std::cout << r.collector() << ": ";
-                
+
                 // Print Record dump type ('U'pdate or 'R'IB)
                 switch (r.dump_type()) {
                 case BGP::Record::DumpType::Update:
@@ -77,13 +86,10 @@ int main(int argc, char** argv) {
                 }
 
                 std::cout << i++;
-                
-                // Get element from optional<Element>
-                auto e = *element;
 
                 // Get timestamp of element
                 auto tm = e.timestamp();
-                
+
                 // [<date time>] [AS xxx aaa.bbb.ccc.ddd]
                 std::cout
                     << " [" << std::put_time(std::gmtime(&tm), "%F %T") << "] "
@@ -114,7 +120,7 @@ int main(int argc, char** argv) {
                 std::cout << " ";
 
                 auto pfx = e.prefix();
-                
+
                 // Print announced/withdrawn prefix
                 if (do_prefix) {
                     std::cout << "prefix: " << util::format_prefix(pfx) << " ";
@@ -124,35 +130,37 @@ int main(int argc, char** argv) {
                 if (do_path) {
                     std::cout << "next hop: " << util::format_ip(e.next_hop()) << " via path:";
 
-                    uint32_t origin;
-                    
+                    uint32_t origin = 0;
+
                     for (uint32_t asn : e.as_path()) {
                         std::cout << " " << asn;
                         origin = asn;
                     }
 
-                    // Try verification
-                    lrtr_ip_addr addr;
-                    lrtr_ip_str_to_addr(util::format_ip(pfx.address).c_str(), &addr);
+                    if (rtr) {
 
-                    int rtr_res = mtr.validate(origin, &addr, pfx.mask_len);
+                        // Try verification
+                        lrtr_ip_addr addr;
+                        lrtr_ip_str_to_addr(util::format_ip(pfx.address).c_str(), &addr);
 
-                    std::cout << " rtr: ";
-                
-                    switch (rtr_res) {
-                    case 2: std::cout << "\x1b[1;31mINVALID\x1b[0m"; break;
-                    case 1: std::cout << "\x1b[1;33mNOT FOUND\x1b[0m"; break;
-                    case 0: std::cout << "\x1b[1;32mVERIFIED\x1b[0m" ; break;
-                    case -1: std::cout << "\x1b[1;31mERROR\x1b[0m"; break;
+                        int rtr_res = mtr.validate(origin, &addr, pfx.mask_len);
+
+                        std::cout << " rtr: ";
+
+                        switch (rtr_res) {
+                        case 2: std::cout << "\x1b[1;31mINVALID\x1b[0m"; break;
+                        case 1: std::cout << "\x1b[1;33mNOT FOUND\x1b[0m"; break;
+                        case 0: std::cout << "\x1b[1;32mVERIFIED\x1b[0m" ; break;
+                        case -1: std::cout << "\x1b[1;31mERROR\x1b[0m"; break;
+                        }
                     }
                 }
-
                 std::cout << std::endl;
             }
         }
     }
 
-    // mtr.stop();
+    if (rtr) mtr.stop();
 
     return 0;
 }
