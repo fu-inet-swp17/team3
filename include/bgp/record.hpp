@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <memory>
+#include <iterator>
 #include <experimental/optional>
 
 #include <boost/log/trivial.hpp>
@@ -26,6 +27,54 @@ namespace BGP {
 
         friend class BGP::Stream;
 
+        class iterator {
+            
+        private:
+            Record& record;
+            Element e;
+        
+        public:
+            typedef std::input_iterator_tag iterator_category;
+            typedef Element value_type;
+            typedef ptrdiff_t difference_type;
+            typedef Element* pointer;
+            typedef Element& reference;
+            
+            iterator(Record& r, bool end) : record(r), e(nullptr) {
+                if (!end)
+                    e.elem = bgpstream_record_get_next_elem(record.record.get());
+            }
+
+            bool operator==(const iterator& other) {
+                return (this->e.elem == other.e.elem);
+            }
+
+            bool operator!=(const iterator& other) {
+                return !(*this == other);
+            }
+
+            // pre-increment
+            iterator& operator++() {
+                e.elem = bgpstream_record_get_next_elem(record.record.get());
+                return *this;
+            }
+
+            // post-increment
+            iterator operator++(int) {
+                iterator tmp = *this; 
+                e.elem = bgpstream_record_get_next_elem(record.record.get());
+                return tmp;
+            }
+            
+            reference operator*() {
+                return e;
+            }
+
+            pointer operator->() {
+                return &e;
+            }
+        };
+        
     public:
         enum class Status {
             // The record is valid and may be used.
@@ -92,28 +141,14 @@ namespace BGP {
             bgpstream_record_print_mrt_data(record.get());
         }
 
-        optional<Element> next(void) {
-            // The returned pointer is guaranteed to be valid until
-            // the record is re-used in a subsequent call to
-            // bgpstream_get_next_record, or is destroyed with
-            // bgpstream_record_destroy.
-
-            bgpstream_elem_t* next = bgpstream_record_get_next_elem(record.get());
-
-            if (next) {
-                auto elem_buf_ptr = unique_elem_ptr(bgpstream_elem_create(),
-                                                    bgpstream_elem_destroy);
-                // FIXME: we copy for now, this might become a bottlehead
-                // FIXME: check return value & throw exception if NULL
-                bgpstream_elem_copy(elem_buf_ptr.get(), next);
-
-                // gets moved
-                return Element(elem_buf_ptr);
-            } else {
-                return {};
-            }
+        iterator begin() {
+            return iterator(*this, false);
         }
-                
+
+        iterator end() {
+            return iterator(*this, true);
+        }
+
     private:
         unique_record_ptr record;
     };
