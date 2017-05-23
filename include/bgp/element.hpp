@@ -19,8 +19,6 @@ using std::experimental::optional;
 
 namespace BGP {
 
-    typedef std::unique_ptr<bgpstream_elem_t, void(*)(bgpstream_elem_t*)> unique_elem_ptr;
-
     class Element {
     public:
 
@@ -44,10 +42,10 @@ namespace BGP {
             Deleted = BGPSTREAM_ELEM_PEERSTATE_DELETED
         };
 
-        Element(unique_elem_ptr& elem_ptr) : elem(std::move(elem_ptr)) {
-            BOOST_LOG_TRIVIAL(trace) << "BGP::Element::Element()";
-        }
+        bgpstream_elem_t* elem;
 
+        Element(bgpstream_elem_t* e) : elem(e) { /* */ };
+        
         Element::Type type(void) {
             return Element::Type(elem->type);
         }
@@ -98,7 +96,7 @@ namespace BGP {
             char buf[2 << 16] = {0};
 
             // FIXME: report to bgpstream, overflow in bgpstream_elem_snprintf
-            if(elem.get() && bgpstream_elem_custom_snprintf(buf, sizeof(buf), elem.get(), 0)) {
+            if(elem && bgpstream_elem_custom_snprintf(buf, sizeof(buf), elem, 0)) {
                 buf[sizeof(buf) - 1] = 0;
                 return std::string(buf);
             } else {
@@ -106,9 +104,6 @@ namespace BGP {
                 return std::string("no element");
             }
         }
-
-    private:
-        std::shared_ptr<bgpstream_elem_t> elem;
     };
 
     std::ostream& operator<<(std::ostream& os, Element& e) {
