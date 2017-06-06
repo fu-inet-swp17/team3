@@ -35,3 +35,6 @@
 # Build files
 build/
 build-*/
+
+# Data files
+*.gz
