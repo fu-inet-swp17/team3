@@ -19,11 +19,15 @@ find_package(RTRLib REQUIRED)
 # find BGPStream library
 find_package(BGPStream REQUIRED)
 
-# add main executable
-add_executable(bgp src/main.cpp)
+# add bgpreadercpp executable
+add_executable(bgpreadercpp src/reader.cpp)
+target_include_directories(bgpreadercpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(bgpreadercpp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
 
-target_include_directories(bgp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(bgp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
+# add fuzzbgp executable
+add_executable(fuzzbgp src/fuzzbgp.cpp src/prefix_store.cpp)
+target_include_directories(fuzzbgp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(fuzzbgp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
 
 # add both bgpstream tutorial projects & rtrclient but exclude from 'make all'
 add_executable(bgpstream-tutorial misc/tutorials/bgpstream-tutorial.c)
@@ -37,4 +41,4 @@ target_link_libraries(rtrclient ${RTRLIB_LIBRARIES})
 set_target_properties(bgpstream-tutorial bgpstream-pfx-mon rtrclient
   PROPERTIES EXCLUDE_FROM_ALL 1)
 
-install(TARGETS bgp DESTINATION bin)
+install(TARGETS fuzzbgp bgpreadercpp DESTINATION bin)
