@@ -4,7 +4,10 @@
 #include <thread>
 #include <iomanip>
 #include <string>
+#include <map>
+#include <tuple>
 #include <sstream>
+#include <unordered_set>
 
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
@@ -51,7 +54,6 @@ int main(int argc, char** argv) {
     std::cout << "Fetching data..." << std::endl;
 
     BGP::Record r;
-
     while (stream.next(r)) {
 
         BOOST_LOG_TRIVIAL(debug)
