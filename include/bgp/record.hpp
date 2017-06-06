@@ -109,35 +109,35 @@ namespace BGP {
         // Default constructor
         Record(void) : record(bgpstream_record_create(), bgpstream_record_destroy) { /* */ }
 
-        Record::Status status(void) {
+        Record::Status status(void) const {
             return Record::Status(record->status);
         }
 
-        Record::Position position(void) {
+        Record::Position position(void) const {
             return Record::Position(record->dump_pos);
         }
 
-        std::string project(void) {
+        std::string project(void) const {
             return std::string(record->attributes.dump_project);
         }
 
-        std::string collector(void) {
+        std::string collector(void) const {
             return std::string(record->attributes.dump_collector);
         }
 
-        unsigned long dump_time(void) {
-            return record->attributes.dump_time;
+        std::time_t dump_time(void) const {
+            return static_cast<std::time_t>(record->attributes.dump_time);
+        }
+        
+        std::time_t record_time(void) const {
+            return static_cast<std::time_t>(record->attributes.record_time);
         }
 
-        unsigned long record_time(void) {
-            return record->attributes.record_time;
-        }
-
-        Record::DumpType dump_type(void) {
+        Record::DumpType dump_type(void) const {
             return Record::DumpType(record->attributes.dump_type);
         }
 
-        void print(void) {
+        void print(void) const {
             bgpstream_record_print_mrt_data(record.get());
         }
 
@@ -153,14 +153,14 @@ namespace BGP {
         unique_record_ptr record;
     };
 
-    std::ostream& operator<<(std::ostream& os, Record& e) {
+    inline std::ostream& operator<<(std::ostream& os, Record& e) {
         os << e.record_time() << "|"
            << e.project() << "|"
            << e.collector();
         return os;
     }
 
-    std::ostream& operator<<(std::ostream& os, const Record::Position& dump_pos) {
+    inline std::ostream& operator<<(std::ostream& os, const Record::Position& dump_pos) {
         switch (dump_pos) {
         case Record::Position::Start: os << 'S'; break;
         case Record::Position::Middle: os << 'M'; break;
@@ -170,7 +170,7 @@ namespace BGP {
         return os;
     }
 
-    std::ostream& operator<<(std::ostream& os, const Record::DumpType& dump_type) {
+    inline std::ostream& operator<<(std::ostream& os, const Record::DumpType& dump_type) {
         switch (dump_type) {
         case Record::DumpType::Update: os << 'U'; break;
         case Record::DumpType::RIB: os << 'R'; break;
@@ -179,7 +179,7 @@ namespace BGP {
         return os;
     }
 
-    std::ostream& operator<<(std::ostream& os, const Record::Status& status) {
+    inline std::ostream& operator<<(std::ostream& os, const Record::Status& status) {
         switch (status) {
         case Record::Status::Valid: os << "valid"; break;
         case Record::Status::FilteredSource: os << "filtered source"; break;

@@ -10,7 +10,7 @@ extern "C" {
 namespace util {
 
     // Format a bgpstream_addr_storage_t as string
-    std::string format_ip(const bgpstream_addr_storage_t& addr) {
+    inline std::string format_ip(const bgpstream_addr_storage_t& addr) {
         char buf[INET6_ADDRSTRLEN] = {0};
 
         if (addr.version == BGPSTREAM_ADDR_VERSION_IPV4) {
@@ -27,7 +27,7 @@ namespace util {
     }
 
     // Format a bgpstream_pfx_storage_t as string
-    std::string format_prefix(const bgpstream_pfx_storage_t& pfx) {
+    inline std::string format_prefix(const bgpstream_pfx_storage_t& pfx) {
         std::stringstream ss;
 
         ss << format_ip(pfx.address) << "/" << std::to_string(pfx.mask_len);

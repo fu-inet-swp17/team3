@@ -1,9 +1,10 @@
-#ifndef BGPELEMENT_HPP_INCLUDED
-#define BGPELEMENT_HPP_INCLUDED
+#ifndef BGP_ELEMENT_HPP_INCLUDED
+#define BGP_ELEMENT_HPP_INCLUDED
 
 #include <iostream>
 #include <utility>
 #include <list>
+#include <sstream>
 
 extern "C" {
 #include "bgpstream_elem.h"
@@ -45,37 +46,37 @@ namespace BGP {
         bgpstream_elem_t* elem;
 
         Element(bgpstream_elem_t* e) : elem(e) { /* */ };
-        
-        Element::Type type(void) {
+
+        Element::Type type(void) const {
             return Element::Type(elem->type);
         }
 
-        std::time_t timestamp(void) {
+        std::time_t timestamp(void) const {
             return static_cast<std::time_t>(elem->timestamp);
         }
 
-        std::uint32_t peer_asnumber(void) {
+        std::uint32_t peer_asnumber(void) const {
             return elem->peer_asnumber;
         }
 
-        std::pair<PeerState, PeerState> peer_state(void) {
+        std::pair<PeerState, PeerState> peer_state(void) const {
             return std::pair<PeerState, PeerState>(Element::PeerState(elem->old_state),
                                                    Element::PeerState(elem->new_state));
         }
 
-        bgpstream_addr_storage_t peer_address(void) {
+        bgpstream_addr_storage_t peer_address(void) const {
             return elem->peer_address;
         }
 
-        bgpstream_addr_storage_t next_hop(void) {
+        bgpstream_addr_storage_t next_hop(void) const {
             return elem->nexthop;
         }
 
-        bgpstream_pfx_storage_t prefix(void) {
+        bgpstream_pfx_storage_t prefix(void) const {
             return elem->prefix;
         }
 
-        std::list<uint32_t> as_path(void) {
+        std::list<uint32_t> as_path(void) const {
             bgpstream_as_path_iter_t it;
             bgpstream_as_path_iter_reset(&it);
 
@@ -85,13 +86,25 @@ namespace BGP {
                 // FIXME: figure out what the other types mean
                 if (seg->type == BGPSTREAM_AS_PATH_SEG_ASN)
                     path.push_back(reinterpret_cast<bgpstream_as_path_seg_asn_t *>(seg)->asn);
+                else
+                    BOOST_LOG_TRIVIAL(debug) << "AS_PATH ERROR (not implemented)";
             }
 
             return path;
         }
 
+        std::string as_path_string(void) const {
+            std::stringstream ss;
+
+            for (const auto& x : as_path()) {
+                ss << x << " ";
+            }
+
+            return ss.str();
+        }
+
         // Return bgpstream string representation
-        std::string as_string(void) {
+        std::string as_string(void) const {
 
             char buf[2 << 16] = {0};
 
@@ -106,12 +119,12 @@ namespace BGP {
         }
     };
 
-    std::ostream& operator<<(std::ostream& os, Element& e) {
+    inline std::ostream& operator<<(std::ostream& os, BGP::Element& e) {
         os << e.as_string();
         return os;
     }
 
-    std::ostream& operator<<(std::ostream& os, const Element::Type& type) {
+    inline std::ostream& operator<<(std::ostream& os, const BGP::Element::Type& type) {
         switch (type) {
         case BGP::Element::Type::RIB: os << 'R'; break;
         case BGP::Element::Type::Announcement: os << 'A'; break;
@@ -122,6 +135,25 @@ namespace BGP {
         return os;
     }
 
+    inline std::ostream& operator<<(std::ostream& os, const BGP::Element::PeerState& peer_state) {
+        switch (peer_state) {
+        case BGP::Element::PeerState::Idle: os << "Idle"; break;
+        case BGP::Element::PeerState::Connect: os << "Connect"; break;
+        case BGP::Element::PeerState::Active: os << "Active"; break;
+        case BGP::Element::PeerState::OpenSent: os << "OpenSent"; break;
+        case BGP::Element::PeerState::OpenConfirm: os << "OpenConfirm"; break;
+        case BGP::Element::PeerState::Established: os << "Established"; break;
+        case BGP::Element::PeerState::Clearing: os << "Clearing"; break;
+        case BGP::Element::PeerState::Deleted: os << "Deleted"; break;
+        default: os << '?'; break;
+        };
+        return os;
+    }
+
+
 }
+
+
+
 
 #endif
