@@ -44,7 +44,7 @@ namespace BGP {
     private:
         std::unique_ptr<bgpstream_t, void(*)(bgpstream_t*)> stream;
         bgpstream_data_interface_id_t if_id;
-        bool started = false;
+        bool started = false, stopped = false;
         
     public:
         Stream(void) : stream(bgpstream_create(), bgpstream_destroy) {
@@ -162,6 +162,15 @@ namespace BGP {
             started = true;
         }
 
+        // Stop the stream
+        void stop(void) {
+            BOOST_LOG_TRIVIAL(trace) << "BGP::Stream::stop()";
+
+            bgpstream_stop(stream.get());
+
+            stopped = true;
+        }
+        
         // Faster than the other next(), allows reusing a single Record
         bool next(Record& r) {
 
