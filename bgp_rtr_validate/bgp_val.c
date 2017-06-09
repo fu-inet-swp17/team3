@@ -1,9 +1,128 @@
-/* compile and link: gcc <program file> -lbgpstream -lrtr */
+/* compile and link: gcc <program file> -lpthread -lbgpstream -lrtr */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "bgpstream.h"
 #include "rtrlib/rtrlib.h"
+
+uint32_t last_elem_timestamp = 0;
+uint32_t last_print_timestamp = 0;
+int pfx_valid = 0;
+int pfx_invalid = 0;
+int pfx_notfound = 0;
+bool new_data = false;
+
+/* Array for AS with invalid updates */
+typedef struct
+{
+  int *asn;
+  int *invalid_updates;
+  size_t used;
+  size_t size;
+} asn_array;
+asn_array a;
+
+void init_asn_array(asn_array *a, size_t initial_size)
+{
+  a->asn = (int *)malloc(initial_size * sizeof(int));
+  a->invalid_updates = (int *)malloc(initial_size * sizeof(int));
+  a->used = 1;
+  a->size = initial_size + 1;
+  a->asn[0] = 0;
+  a->invalid_updates[0] = 0;
+}
+
+/* Return position of AS in array */
+int array_pos_asn(asn_array *a, int asn)
+{
+  int i;
+  for(i=0; i<a->used; i++) {
+    if(a->asn[i] == asn) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/* Add new AS to array (if not already there) or increment its counter */ 
+void add_asn(asn_array *a, int bad_asn)
+{
+  int pos = array_pos_asn(a, bad_asn);
+  if(pos >= 0) {
+    a->invalid_updates[pos]++;
+  }
+  else {
+    if(a->used == a->size) {
+      a->size *= 2;
+      a->asn = (int *)realloc(a->asn, a->size * sizeof(int));
+      a->invalid_updates = (int *)realloc(a->invalid_updates, a->size * sizeof(int));
+    }
+    a->asn[a->used] = bad_asn;
+    a->invalid_updates[a->used++] = 1;
+  }
+}
+
+/* Print: <timestamp of last elem>|<valid>|<invalid>|<not found> */
+int print_data(int chart[5][2])
+{
+  printf("%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n",
+    last_elem_timestamp,  // timestamp of last processed record
+    pfx_valid,            // no. of updates with valid pfx
+    pfx_invalid,          // no. of updates with invalid pfx
+    pfx_notfound,         // no. of updates with pfx not in RPKI
+    chart[0][0],          // #1 AS with invalid updates
+    chart[0][1],          // #1 AS invalid updates counter
+    chart[1][0],          // #2 ...
+    chart[1][1],          // #2 ...
+    chart[2][0],          // #3 ...
+    chart[2][1],          // #3 ...
+    chart[3][0],          // #4 ...
+    chart[3][1],          // #4 ...
+    chart[4][0],          // #5 AS with invalid updates
+    chart[4][1]           // #5 AS invalid updates counter
+  );
+  last_print_timestamp = (uint32_t)time(NULL);
+  new_data = false;
+  return 0;
+}
+
+void *print_thread()
+{
+  /* Top 5 AS with the most invalid updates */
+  int top_asn[5][2] = {{0,0},{0,0},{0,0},{0,0},{0,0}};
+  int length = sizeof(top_asn)/sizeof(top_asn[0]);
+  int i,j;
+  int max = 0;
+  for(;;) {
+    sleep(5);
+    if((last_elem_timestamp > 0) && (new_data)) {
+      for(i=0; i<length; i++) {
+        max = 0;
+        for(j=0; j<a.used; j++) {
+          if(i>0) {
+            /* TODO Check if ASN is already in array to avoid duplicates */
+            if((a.invalid_updates[j] > a.invalid_updates[max])
+              && (a.invalid_updates[j] <= top_asn[i-1][1])
+              && (a.asn[j] != top_asn[i-1][0])) {
+              max = j;
+            }
+          }
+          else {
+            if(a.invalid_updates[j] > a.invalid_updates[max]) {
+              max = j;
+            }
+          }
+        }
+        top_asn[i][0] = a.asn[max];
+        top_asn[i][1] = a.invalid_updates[max];
+        //printf("TOP: %d (%d)\n", top_asn[i][0], top_asn[i][1]);
+      }
+      print_data(top_asn);
+    }
+  }
+  return 0;
+}
 
 int main(int argc, const char **argv)
 {
@@ -14,10 +133,7 @@ int main(int argc, const char **argv)
   bgpstream_as_path_seg_t *seg = NULL;
   int elem_counter = 0;
   int elem_invalid_counter = 0;
-  int pfx_valid = 0;
-  int pfx_invalid = 0;
-  int pfx_notfound = 0;
-  char buffer[2048];
+  char buffer[2048];  // 1024 is not enough in some cases
   char rtr_buffer[INET_ADDRSTRLEN];
 
   /* Set metadata filters */
@@ -68,6 +184,13 @@ int main(int argc, const char **argv)
   struct lrtr_ip_addr pref;
   enum pfxv_state result;
 
+  /* Thread for printing */
+  pthread_t tid;
+  pthread_create(&tid, NULL, &print_thread, NULL);
+  
+  /* Init AS array */
+  init_asn_array(&a, 5);
+
   /* Start the BGP stream */
   bgpstream_start(bs);
 
@@ -102,26 +225,25 @@ int main(int argc, const char **argv)
         );
         elem_counter++;
         lrtr_ip_addr_to_str(&pref, rtr_buffer, sizeof(rtr_buffer));
-
-        /* Print: <timestamp of last elem>|<valid>|<invalid>|<not found> */
+        last_elem_timestamp = elem->timestamp;
         switch(result) {
           case BGP_PFXV_STATE_VALID:
-            printf("%d|%d|%d|%d\n",
-              elem->timestamp, ++pfx_valid, pfx_invalid, pfx_notfound);
+            pfx_valid++;
             break;
           case BGP_PFXV_STATE_INVALID:
-            printf("%d|%d|%d|%d\n",
-              elem->timestamp, pfx_valid, ++pfx_invalid, pfx_notfound);
+            pfx_invalid++;
+            add_asn(&a, atoi(buffer));  // add AS to array
             break;
           case BGP_PFXV_STATE_NOT_FOUND:
-            printf("%d|%d|%d|%d\n",
-              elem->timestamp, pfx_valid, pfx_invalid, ++pfx_notfound);
+            pfx_notfound++;
             break;
           default:
             break;
         }
+        new_data = true;
       }
     }
+    //print_data();
   }
 
   /* Print the number of elems */
@@ -136,6 +258,12 @@ int main(int argc, const char **argv)
   /* De-allocate memory for bgpstream */
   bgpstream_destroy(bs);
   bgpstream_record_destroy(record);
+
+  /* Release memory for AS array */
+  free(a.asn);
+  free(a.invalid_updates);
+  a.asn = a.invalid_updates = NULL;
+  a.used = a.size = 0;
 
   return 0;
 }
