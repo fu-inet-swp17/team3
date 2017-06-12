@@ -66,7 +66,7 @@ void add_asn(asn_array *a, int bad_asn)
 /* Print: <timestamp of last elem>|<valid>|<invalid>|<not found> */
 int print_data(int chart[5][2])
 {
-  printf("%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n",
+  fprintf(stdout, "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n",
     last_elem_timestamp,  // timestamp of last processed record
     pfx_valid,            // no. of updates with valid pfx
     pfx_invalid,          // no. of updates with invalid pfx
@@ -82,6 +82,7 @@ int print_data(int chart[5][2])
     chart[4][0],          // #5 AS with invalid updates
     chart[4][1]           // #5 AS invalid updates counter
   );
+  fflush(stdout);
   last_print_timestamp = (uint32_t)time(NULL);
   new_data = false;
   return 0;
