@@ -25,7 +25,7 @@ target_include_directories(bgpreadercpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inclu
 target_link_libraries(bgpreadercpp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
 
 # add fuzzbgp executable
-add_executable(fuzzbgp src/fuzzbgp.cpp src/prefix_store.cpp)
+add_executable(fuzzbgp src/fuzzbgp.cpp src/prefix_store.cpp src/stream_controller.cpp)
 target_include_directories(fuzzbgp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(fuzzbgp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
 
