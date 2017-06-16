@@ -24,7 +24,7 @@ private:
 
     struct collector_entry {
         std::string name;
-        
+
         std::time_t rib_time;
         std::time_t last_update_dump;
         std::time_t last_update_record;
@@ -48,7 +48,7 @@ private:
     std::pair<Instruction, unsigned> handle(const BGP::Record& r);
 
 public:
-    
+
     // Construct by moving BGP::Stream
     StreamController(BGP::Stream&& s);
 

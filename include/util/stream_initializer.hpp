@@ -35,8 +35,7 @@ namespace util {
         // Print out description of the interface set
         BOOST_LOG_TRIVIAL(info) << "data interface: "
                                 << stream.get_interface().first
-                                << " (" << stream.get_interface().second << ")"
-                                << std::endl;
+                                << " (" << stream.get_interface().second << ")";
 
         // Set interface options if any given
         for (auto& opt : opts.interface_options()) {
