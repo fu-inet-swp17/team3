@@ -137,6 +137,14 @@ namespace BGP {
             return Record::DumpType(record->attributes.dump_type);
         }
 
+        bool is_rib(void) const {
+            return (dump_type() == Record::DumpType::RIB);
+        }
+
+        bool is_update(void) const {
+            return (dump_type() == Record::DumpType::Update);
+        }
+
         void print(void) const {
             bgpstream_record_print_mrt_data(record.get());
         }
