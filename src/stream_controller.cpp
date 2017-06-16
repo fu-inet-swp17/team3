@@ -43,7 +43,7 @@ std::pair<StreamController::Instruction, unsigned> StreamController::next(BGP::R
 }
 
 void StreamController::print(void) const {
-    
+
     std::cout << "Collector Log: " << std::endl;
 
     int i = 0;
@@ -67,6 +67,9 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
                 e.rib_time = r.dump_time();
                 e.ribs_processed = 1;
                 e.in_rib = true;
+
+                BOOST_LOG_TRIVIAL(info) << "starting RIB import for collector '" << e.name << "'";
+
                 return Instruction::Flush;
             }
 
@@ -87,6 +90,9 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
 
             if ((e.rib_time == r.dump_time())) {
                 e.in_rib = false;
+
+                BOOST_LOG_TRIVIAL(info) << "completing RIB import for collector '" << e.name << "'";
+
                 return Instruction::Process;
             } else
                 throw std::runtime_error("Unexpected End RIB record");
@@ -114,9 +120,10 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
 
         if (p == BGP::Record::Position::End) {
 
-            if (e.last_update_dump < r.dump_time()) {
+            if (e.last_update_dump < r.dump_time())
                 e.last_update_dump = r.dump_time();
-            }
+            else
+                throw std::runtime_error("Unexpected end update record");
         }
 
         e.last_update_record = r.record_time();
@@ -142,7 +149,8 @@ std::pair<StreamController::Instruction, unsigned> StreamController::handle(cons
         return std::make_pair(update(r, *m), m - log.begin());
 
     } else {
-        
+        BOOST_LOG_TRIVIAL(info) << "new collector '" << name << "'";
+
         // Create new collector entry at the end of the log
         log.emplace_back(name);
 
