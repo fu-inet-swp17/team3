@@ -9,7 +9,7 @@ PrefixStore::PrefixStore(void) {
     BOOST_LOG_TRIVIAL(trace) << "PrefixStore::PrefixStore()";
 }
 
-void PrefixStore::upsert_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, std::uint32_t origin, std::time_t tm) {
+void PrefixStore::upsert_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, std::uint32_t origin, std::time_t) {
 
     auto& l = pfx_map[pfx];
 
@@ -28,7 +28,7 @@ void PrefixStore::upsert_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, s
     }
 }
 
-void PrefixStore::delete_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, std::uint32_t origin, std::time_t tm) {
+void PrefixStore::delete_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, std::uint32_t, std::time_t tm) {
 
     auto& l = pfx_map[pfx];
 
@@ -70,19 +70,19 @@ void PrefixStore::delete_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, s
     }
 }
 
-void PrefixStore::add_withdrawal(const BGP::Element& e) {
+void PrefixStore::add_withdrawal(unsigned, const BGP::Element& e) {
     BOOST_LOG_TRIVIAL(trace) << "PrefixStore::add_withdrawal()";
 
     delete_status(e.prefix(), e.peer_asnumber(), e.as_path().back(), e.timestamp());
 }
 
-void PrefixStore::add_rib_element(const BGP::Element& e) {
+void PrefixStore::add_rib_element(unsigned, const BGP::Element& e) {
     BOOST_LOG_TRIVIAL(trace) << "PrefixStore::add_rib_element()";
 
     upsert_status(e.prefix(), e.peer_asnumber(), e.as_path().back(), e.timestamp());
 }
 
-void PrefixStore::add_announcement(const BGP::Element& e) {
+void PrefixStore::add_announcement(unsigned, const BGP::Element& e) {
     BOOST_LOG_TRIVIAL(trace) << "PrefixStore::add_announcement()";
 
     upsert_status(e.prefix(), e.peer_asnumber(), e.as_path().back(), e.timestamp());

@@ -16,7 +16,7 @@ class PrefixStore {
     };
 
 private:
-    
+
     prefix::split_map<std::list<prefix_status>> pfx_map;
 
 public:
@@ -27,11 +27,13 @@ public:
 
     PrefixStore(void);
 
-    void add_rib_element(const BGP::Element& e);
+    void flush(unsigned) { };
 
-    void add_announcement(const BGP::Element& e);
+    void add_rib_element(unsigned collector, const BGP::Element& e);
 
-    void add_withdrawal(const BGP::Element& e);
+    void add_announcement(unsigned collector, const BGP::Element& e);
+
+    void add_withdrawal(unsigned collector, const BGP::Element& e);
 };
 
 #endif
