@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
             case StreamController::Instruction::Flush:
                 pfx_store.flush(collector);
 
+            case StreamController::Instruction::Apply:
             case StreamController::Instruction::Process:
                 processed++;
 

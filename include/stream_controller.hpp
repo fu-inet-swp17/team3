@@ -16,6 +16,8 @@ public:
         Ignore,
         // This record contains RIBs after an update period -> flush existing routes
         Flush,
+        // This record contains Updates after reading RIB data -> apply
+        Apply,
         // This record contains RIBs or updates -> process
         Process
     };
