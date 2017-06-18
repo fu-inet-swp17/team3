@@ -7,7 +7,6 @@
 //============================================================================
 
 #include <iostream>
-#include "bgpFunktions/bgpFunctions.hpp"
 #include <map>
 #include "ncurses/ncursesFunctions.hpp"
 #include <random>
@@ -28,30 +27,11 @@ void run() {
 
 int main() {
 	(*closeNonse) = false;
-	//cout << "!!!Hello World!!!" << endl; // prints !!!Hello World!!!
 
-	//bgpstream_add_interval_filter(bs, 1286705410, 1286709071);
-
-	std::map<int, long> asMap;
-	std::map<const char*, long> sources;
-	std::map<int, long>* asMapP = &asMap;
-	std::map<const char*, long>* sourcesP = &sources;
-
-	(*sourcesP)["route-views2"] = 0;
-	(*sourcesP)["route-views3"] = 0;
-	(*sourcesP)["route-views4"] = 0;
-	(*sourcesP)["route-views6"] = 0;
-	(*sourcesP)["rrc00"] = 0;
 
 	NcursesFunctions ncurses = NcursesFunctions();
-	BGPFunctions bgpFunctions = BGPFunctions();
 
 	ncurses.initialise(closeNonse);
-	//bgpFunctions.initialise(asMapP, sourcesP);
-
-	//while (ncurses.printScreen()) {
-	//bgpFunctions.updateBGPData();
-	//}
 
 	std::string xAchse = std::string();
 	xAchse += "Timestamp";
@@ -79,7 +59,6 @@ int main() {
 
 	//OutageData* outage;
 
-	int random = dist62(rng2);
 	kkk.insert(new OutageData(dist62(rng2), dist6(rng)));
 	kkk2.insert(new OutageData(dist62(rng2), dist6(rng)));
 	int counter = 0;
@@ -128,15 +107,6 @@ int main() {
 	}
 
 	ncurses.close();
-
-	/*
-	 * bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views3");
-	 bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views4");
-	 bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views6");
-	 bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views.eqix");
-	 bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR,
-	 "route-views.jinx");
-	 */
 
 	return 0;
 }

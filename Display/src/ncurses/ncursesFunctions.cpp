@@ -10,7 +10,6 @@
 #include <iostream>
 #include <ctime>
 
-#include "../bgpFunktions/bgpFunctions.hpp"
 
 int NcursesFunctions::printScreen() {
 	switch (screenState) {
