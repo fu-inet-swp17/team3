@@ -10,7 +10,6 @@
 #include <iostream>
 #include <ctime>
 
-
 int NcursesFunctions::printScreen() {
 	switch (screenState) {
 	case NcursesFunctions::MainWindow:
@@ -34,7 +33,7 @@ void NcursesFunctions::initialise(volatile bool *close) {
 	start_color(); /* Start color */
 }
 
-void NcursesFunctions::setBool(volatile bool *close){
+void NcursesFunctions::setBool(volatile bool *close) {
 	this->closeB = close;
 }
 
@@ -98,111 +97,6 @@ int NcursesFunctions::switchScreen(void) {
 	return 1;
 }
 
-/*void NcursesFunctions::printDiagramm(WINDOW *win, std::string *yAchse, std::string *xAchse, std::string *diagrammName, std::multiset<const OutageData*, OutageData> *data) {
- curs_set(0);
- unsigned int x = 1;
- unsigned int y = 1;
- //TODO: window size
-
- getmaxyx(win, y, x);
-
- //Creating space for Diagram Naming
- //check if diagramm still fits
- if ((x - 5) < 1 || (y - 5) < 1) {
- return;
- }
-
- //Beschriefte Diagramm
-
- if ((*xAchse).size() > x) {
- (*xAchse) = (*xAchse).data()[0] + '.';
- }
- if ((*yAchse).size() > y) {
- (*yAchse) = (*yAchse).data()[0] + '.';
- }
-
- wmove(win, y - 1, (x / 2) - ((*xAchse).size() / 2));
- wprintw(win, (*xAchse).data());
- unsigned int startPositionYAchse = (y / 2) - ((*yAchse).size() / 2);
- unsigned int k = 0;
- for (k = 0; k < (*yAchse).size(); k++) {
- wmove(win, k + startPositionYAchse, 0);
- waddch(win, (unsigned long int) (*yAchse).data()[k]);
- }
-
- //Zeichne Grundgerüst
- //Zeichne Grundgerüst yAchse
- for (k = 0; k < (y - 2); k++) {
- wmove(win, k, 1);
- waddch(win, (unsigned long int) '|');
- }
-
- unsigned int rowCount = k - 1;
-
- wmove(win, k, 1);
- waddch(win, (unsigned long int) '+');
- for (k = 0; k < x - 2; k++) {
- wmove(win, y - 2, 2 + k);
- waddch(win, (unsigned long int) '-');
- }
- unsigned int columnCount = k - 1;
-
- //Ermittle Min-Max Werte
-
- unsigned int size = data->size();
-
- wmove(win, 0, 0);
- wprintw(win, "Size: %i", size);
-
- std::multiset<const OutageData*, OutageData>::iterator iter = (*data).begin();
- int startTimestamp = (*iter)->getTimestamp();
-
- iter = (*data).end();
- iter--;
-
- int endTimestamp = (*iter)->getTimestamp();
-
- unsigned int timeIntervallOverall = endTimestamp - startTimestamp;
-
- unsigned int timeIntervallPerCaloumn = timeIntervallOverall / columnCount;
-clear
- unsigned int position;
-
- unsigned int maxValue = 0;
-
- for (iter = (*data).begin(); iter != (*data).end(); iter++) {
- if (maxValue < (*iter)->getCountPrefixes()) {
- maxValue = (*iter)->getCountPrefixes();
- }
- }
-
- wmove(win, y - 1, 0);
- wprintw(win, "MaxTimeStamp: %i", endTimestamp);
-
- unsigned int prefixCountPerRow = maxValue / rowCount;
- if (prefixCountPerRow == 0) {
- prefixCountPerRow = 1;
- }
-
- for (iter = (*data).begin(); iter != (*data).end(); iter++) {
- position = ((*iter)->getTimestamp() - startTimestamp) / timeIntervallPerCaloumn;
- wmove(win, 6, 5);
- if (position > columnCount) {
- position = columnCount;
- }
- unsigned int rowAmount = (*iter)->getCountPrefixes() / prefixCountPerRow;
- if (rowAmount > rowCount) {
- rowAmount = rowCount;
- }
- for (k = 0; k < rowAmount; k++) {
- wmove(win, y - 3 - k, 2 + (position));
- waddch(win, (unsigned int) '|');
- }
- }
-
- //Zeichne Balken
- }*/
-
 void NcursesFunctions::printDiagramm(WINDOW *win, std::string *yAchse, std::string *xAchse, std::string *diagrammName, std::multiset<const OutageData*, OutageData> *data, DiagrammTyp typ, int color) {
 	unsigned int x = 1;
 	unsigned int y = 1;
@@ -225,7 +119,7 @@ void NcursesFunctions::printDiagramm(WINDOW *win, std::string *yAchse, std::stri
 
 	int arrayPosition = 0;
 
-	for(int i = 0; i< columnCount; i++){
+	for (int i = 0; i < columnCount; i++) {
 		array[i] = 0;
 	}
 
@@ -303,12 +197,12 @@ int NcursesFunctions::printDiagram2(WINDOW *win, std::string *yAchse, std::strin
 			maxValueY = array[i];
 	}
 
-
-	wattron(win,COLOR_PAIR(color));
+	wattron(win, COLOR_PAIR(color));
 	unsigned int prefixCountPerRow = maxValueY / rowCount;
 	if (prefixCountPerRow == 0) {
 		prefixCountPerRow = 1;
 	}
+	unsigned int lastValue = 0;
 	switch (typ) {
 	case KURVE:
 	case KURVEINTERPOLIERT:
@@ -317,7 +211,12 @@ int NcursesFunctions::printDiagram2(WINDOW *win, std::string *yAchse, std::strin
 			if (rowAmount > rowCount) {
 				rowAmount = rowCount;
 			}
-			wmove(win, y - 3 - rowAmount, 2 + (i));
+			if (rowAmount > (lastValue + 1)) {
+				rowAmount = lastValue + 1;
+			} else if (lastValue != 0 && rowAmount < (lastValue - 1)) {
+				rowAmount = lastValue - 1;
+			}
+			wmove(win, y - 2 - rowAmount, 2 + (i));
 			if ((i + 1) < length) {
 				unsigned int rowAmountI1 = array[i + 1] / prefixCountPerRow;
 				if (rowAmountI1 > rowCount) {
@@ -333,7 +232,7 @@ int NcursesFunctions::printDiagram2(WINDOW *win, std::string *yAchse, std::strin
 			} else {
 				waddch(win, (unsigned int) '-');
 			}
-
+			lastValue = rowAmount;
 		}
 		break;
 	case BALKEN:
@@ -343,7 +242,7 @@ int NcursesFunctions::printDiagram2(WINDOW *win, std::string *yAchse, std::strin
 				rowAmount = rowCount;
 			}
 			for (k = 0; k < rowAmount; k++) {
-				wmove(win, y - 3 - k, 2 + (i));
+				wmove(win, y - 2 - k, 2 + (i));
 				waddch(win, (unsigned int) '|');
 			}
 		}
@@ -351,7 +250,7 @@ int NcursesFunctions::printDiagram2(WINDOW *win, std::string *yAchse, std::strin
 	default:
 		return -1;
 	}
-	wattroff(win,COLOR_PAIR(color));
+	wattroff(win, COLOR_PAIR(color));
 	return 0;
 }
 
