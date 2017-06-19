@@ -25,8 +25,11 @@ int main()
   int i = 0;
 
   for(;;) {
+    /*
     if(scanw("%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d",
       &last_elem_timestamp,
+    */
+    if(scanw("%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d",
       &pfx_valid,
       &pfx_invalid,
       &pfx_notfound,
@@ -40,7 +43,10 @@ int main()
       &chart[3][1],
       &chart[4][0],
       &chart[4][1]
+    /*
     ) != 14) {
+    */
+    ) != 13) {
       endwin();
       fprintf(stderr, "\tError while parsing input\n");
       return -1;
@@ -58,7 +64,12 @@ int main()
     }
     mvprintw(1, 2, "Processed updates:"); 
     mvprintw(2, 2, "%18d", pfx_valid + pfx_invalid + pfx_notfound);
+    /*
     mvprintw(1, col-26, "Last update:");
+    mvprintw(2, col-26, "%s", asctime(localtime(&last_elem_timestamp)));
+    */
+    last_elem_timestamp = time(NULL) - time(NULL) % 300;
+    mvprintw(1, col-26, "Last update (est.):");
     mvprintw(2, col-26, "%s", asctime(localtime(&last_elem_timestamp)));
     mvprintw(row-1, 0, "");   // go to bottom
     beep();
