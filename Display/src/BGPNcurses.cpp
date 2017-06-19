@@ -7,7 +7,8 @@
 //============================================================================
 
 #include <iostream>
-#include "bgpFunktions/bgpFunctions.hpp"
+#include <fstream>
+#include <sstream>
 #include <map>
 #include "ncurses/ncursesFunctions.hpp"
 #include <random>
@@ -19,6 +20,14 @@
 
 volatile bool chosenOne = false;
 volatile bool *closeNonse = &chosenOne;
+std::ifstream outagesPipe, rtrPipe;
+boost::mutex rtrPipeMutex, outagesPipeMutex;
+std::multiset<const Tupel*, Tupel> rtrValids;
+std::multiset<const Tupel*, Tupel> *rtrvalidTmp = &rtrValids;
+std::multiset<const Tupel*, Tupel> rtrInvalid;
+std::multiset<const Tupel*, Tupel> *rtrInvalidTmp = &rtrInvalid;
+std::multiset<const Tupel*, Tupel> outages;
+std::multiset<const Tupel*, Tupel> *outagesTmp = &outages;
 
 void run() {
 	NcursesFunctions ncurses = NcursesFunctions();
@@ -26,32 +35,97 @@ void run() {
 	ncurses.read();
 }
 
+void rtrRun() {
+	rtrPipe.open("rtrPipe", std::ios::in);
+	if (outagesPipe.good() == false) {
+		printf("Can't open pipe: rtrPipe");
+		chosenOne = true;
+		return;
+	}
+	std::string line, tmp;
+	std::istringstream someStream;
+	int timestamp = 0;
+	int invalits = 0;
+	int valits = 0;
+	Tupel out;
+	if (rtrPipe.is_open()) {
+		while (getline(rtrPipe, line)) {
+			someStream.str(line);
+			if (getline(someStream, tmp, '|')) {
+				timestamp = std::stoi(tmp);
+			} else {
+				break;
+			}
+			if (getline(someStream, tmp, '|')) {
+				valits = std::stoi(tmp);
+			} else {
+				break;
+			}
+			if (getline(someStream, tmp, '|')) {
+				invalits = std::stoi(tmp);
+			} else {
+				break;
+			}
+			someStream.str(std::string());
+			someStream.clear();
+			rtrPipeMutex.lock();
+			rtrValids.insert(new Tupel(timestamp, valits));
+			rtrInvalid.insert(new Tupel(timestamp, invalits));
+			rtrPipeMutex.unlock();
+		}
+		rtrPipe.close();
+	}
+	chosenOne = true;
+}
+
+void outagesRun() {
+	outagesPipe.open("outagesPipe", std::ios::in);
+	if (outagesPipe.good() == false) {
+		printf("Can't open pipe: outagesPipe");
+		chosenOne = true;
+		return;
+	}
+	std::string line, tmp;
+	std::istringstream someStream;
+	int timestamp = 0;
+	int asNumber = 0;
+	int prefixes = 0;
+	Tupel out;
+	if (outagesPipe.is_open()) {
+		while (getline(outagesPipe, line)) {
+			someStream.str(line);
+			if (getline(someStream, tmp, '|')) {
+				timestamp = std::stoi(tmp);
+			} else {
+				break;
+			}
+			if (getline(someStream, tmp, '|')) {
+				asNumber = std::stoi(tmp);
+			} else {
+				break;
+			}
+			if (getline(someStream, tmp, '|')) {
+				prefixes = std::stoi(tmp);
+			} else {
+				break;
+			}
+			someStream.str(std::string());
+			someStream.clear();
+			outagesPipeMutex.lock();
+			outages.insert(new Tupel(timestamp, prefixes));
+			outagesPipeMutex.unlock();
+		}
+		outagesPipe.close();
+	}
+	chosenOne = true;
+}
+
 int main() {
 	(*closeNonse) = false;
-	//cout << "!!!Hello World!!!" << endl; // prints !!!Hello World!!!
-
-	//bgpstream_add_interval_filter(bs, 1286705410, 1286709071);
-
-	std::map<int, long> asMap;
-	std::map<const char*, long> sources;
-	std::map<int, long>* asMapP = &asMap;
-	std::map<const char*, long>* sourcesP = &sources;
-
-	(*sourcesP)["route-views2"] = 0;
-	(*sourcesP)["route-views3"] = 0;
-	(*sourcesP)["route-views4"] = 0;
-	(*sourcesP)["route-views6"] = 0;
-	(*sourcesP)["rrc00"] = 0;
 
 	NcursesFunctions ncurses = NcursesFunctions();
-	BGPFunctions bgpFunctions = BGPFunctions();
 
 	ncurses.initialise(closeNonse);
-	//bgpFunctions.initialise(asMapP, sourcesP);
-
-	//while (ncurses.printScreen()) {
-	//bgpFunctions.updateBGPData();
-	//}
 
 	std::string xAchse = std::string();
 	xAchse += "Timestamp";
@@ -63,25 +137,11 @@ int main() {
 	yAchse2 += "rtrLib Missis";
 	std::string digname2 = std::string();
 	digname2 += "Test2";
+	//Tupel* outage;
 
-	std::multiset<const OutageData*, OutageData> kkk;
-	std::multiset<const OutageData*, OutageData> *tmp = &kkk;
-	std::multiset<const OutageData*, OutageData> kkk2;
-	std::multiset<const OutageData*, OutageData> *tmp2 = &kkk2;
-
-	std::mt19937 rng;
-	rng.seed(std::random_device()());
-	std::uniform_int_distribution<std::mt19937::result_type> dist6(0, 10000);
-
-	std::mt19937 rng2;
-	rng2.seed(std::random_device()());
-	std::uniform_int_distribution<std::mt19937::result_type> dist62(0, 86400);
-
-	//OutageData* outage;
-
-	int random = dist62(rng2);
-	kkk.insert(new OutageData(dist62(rng2), dist6(rng)));
-	kkk2.insert(new OutageData(dist62(rng2), dist6(rng)));
+	rtrValids.insert(new Tupel(0, 0));
+	rtrInvalid.insert(new Tupel(0, 0));
+	outages.insert(new Tupel(0, 0));
 	int counter = 0;
 	int zeitMultiplikator = 1;
 
@@ -91,6 +151,8 @@ int main() {
 	//getchar();
 
 	boost::thread t { run };
+	boost::thread rtrpipe { rtrRun };
+	boost::thread outagepipe { outagesRun };
 
 	//getchar();
 
@@ -99,18 +161,22 @@ int main() {
 
 	getmaxyx(stdscr, y, x);
 
-	WINDOW *win = newwin(y / 2, x / 2, 0, 0);
-	WINDOW *win2 = newwin(y / 2, x / 2, (y / 2) + 1, 0);
+	WINDOW *outagesWindow = newwin(y / 2, x / 2, 0, 0);
+	WINDOW *rtrLibWindow = newwin(y / 2, x / 2, (y / 2) + 1, 0);
 
 	while ((*closeNonse) != true) {
-		kkk.insert(new OutageData(dist62(rng2), dist6(rng)));
-		kkk2.insert(new OutageData(dist62(rng2), dist6(rng)));
 		init_pair(1, COLOR_BLUE, COLOR_BLACK);
-		init_pair(2, COLOR_MAGENTA, COLOR_BLACK);
-		ncurses.printDiagramm(win, &yAchse, &xAchse, &digname, tmp, BALKEN, 1);
-		ncurses.printDiagramm(win2, &yAchse2, &xAchse, &digname2, tmp2, KURVE, 2);
-		wrefresh(win);
-		wrefresh(win2);
+		init_pair(2, COLOR_GREEN, COLOR_BLACK);
+		init_pair(3, COLOR_RED, COLOR_BLACK);
+		outagesPipeMutex.lock();
+		ncurses.printDiagramm(outagesWindow, &yAchse2, &xAchse, &digname2, outagesTmp, BALKEN, 1);
+		outagesPipeMutex.unlock();
+		rtrPipeMutex.lock();
+		ncurses.printDiagramm(rtrLibWindow, &yAchse, &xAchse, &digname, rtrvalidTmp, KURVE, 2);
+		ncurses.printDiagramm(rtrLibWindow, &yAchse, &xAchse, &digname, rtrInvalidTmp, KURVE, 3);
+		rtrPipeMutex.unlock();
+		wrefresh(outagesWindow);
+		wrefresh(rtrLibWindow);
 		//refresh();
 		boost::this_thread::sleep_for(boost::chrono::milliseconds { 200 });
 		std::uniform_int_distribution<std::mt19937::result_type> dist62(3600 * (zeitMultiplikator - 1), 3600 * zeitMultiplikator);
@@ -119,24 +185,15 @@ int main() {
 			zeitMultiplikator++;
 		}
 		clear();
-		wclear(win);
-		wclear(win2);
+		wclear(outagesWindow);
+		wclear(rtrLibWindow);
 		getmaxyx(stdscr, y, x);
-		wresize(win, y / 2, x / 2);
-		wresize(win2, y / 2, x / 2);
-		mvwin(win2, (y / 2) + 1, 0);
+		wresize(outagesWindow, y / 2, x / 2);
+		wresize(rtrLibWindow, y / 2, x / 2);
+		mvwin(rtrLibWindow, (y / 2) + 1, 0);
 	}
 
 	ncurses.close();
-
-	/*
-	 * bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views3");
-	 bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views4");
-	 bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views6");
-	 bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views.eqix");
-	 bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR,
-	 "route-views.jinx");
-	 */
 
 	return 0;
 }

@@ -35,7 +35,7 @@ public:
 	void close();
 	NcursesFunctions(void);
 	~NcursesFunctions(void);
-	void printDiagramm(WINDOW *win, std::string *yAchse, std::string *xAchse, std::string *diagrammName, std::multiset<const OutageData*, OutageData> *data, DiagrammTyp typ, int color);
+	void printDiagramm(WINDOW *win, std::string *yAchse, std::string *xAchse, std::string *diagrammName, std::multiset<const Tupel*, Tupel> *data, DiagrammTyp typ, int color);
 	void read();
 	void setBool(volatile bool *close);
 

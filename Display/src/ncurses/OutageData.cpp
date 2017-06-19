@@ -6,23 +6,23 @@
  */
 #include "OutageData.hpp"
 
-unsigned int OutageData::getTimestamp(void) const {
+unsigned int Tupel::getTimestamp(void) const {
 	return this->timesstamp;
 }
 
-unsigned int OutageData::getCountPrefixes(void) const{
+unsigned int Tupel::getCountPrefixes(void) const{
 	return this->countPrefix;
 }
 
-bool OutageData::operator ()(const OutageData* a1, const OutageData* a2) const {
+bool Tupel::operator ()(const Tupel* a1, const Tupel* a2) const {
 	return a1->getTimestamp() < a2->getTimestamp();
 }
 
-OutageData::OutageData(int timestamp, int countPrefix) {
+Tupel::Tupel(int timestamp, int countPrefix) {
 	this->timesstamp = timestamp;
 	this->countPrefix = countPrefix;
 }
 
-OutageData::OutageData(void) {
+Tupel::Tupel(void) {
 }
 
