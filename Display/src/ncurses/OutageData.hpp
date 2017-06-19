@@ -8,7 +8,7 @@
 #ifndef OUTAGEDATA_HPP_
 #define OUTAGEDATA_HPP_
 
-class OutageData{
+class Tupel{
 
 
 
@@ -19,9 +19,9 @@ private:
 public:
 	unsigned int getTimestamp(void) const;
 	unsigned int getCountPrefixes(void) const;
-	bool operator()(const OutageData* a1, const OutageData* a2) const;
-	OutageData(int timestamp, int countPrefix);
-	OutageData(void);
+	bool operator()(const Tupel* a1, const Tupel* a2) const;
+	Tupel(int timestamp, int countPrefix);
+	Tupel(void);
 };
 
 

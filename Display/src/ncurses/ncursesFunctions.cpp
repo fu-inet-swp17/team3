@@ -97,7 +97,7 @@ int NcursesFunctions::switchScreen(void) {
 	return 1;
 }
 
-void NcursesFunctions::printDiagramm(WINDOW *win, std::string *yAchse, std::string *xAchse, std::string *diagrammName, std::multiset<const OutageData*, OutageData> *data, DiagrammTyp typ, int color) {
+void NcursesFunctions::printDiagramm(WINDOW *win, std::string *yAchse, std::string *xAchse, std::string *diagrammName, std::multiset<const Tupel*, Tupel> *data, DiagrammTyp typ, int color) {
 	unsigned int x = 1;
 	unsigned int y = 1;
 	//TODO: window size
@@ -108,7 +108,7 @@ void NcursesFunctions::printDiagramm(WINDOW *win, std::string *yAchse, std::stri
 
 	int columnCount = x;
 
-	std::multiset<const OutageData*, OutageData>::iterator iter = (*data).end();
+	std::multiset<const Tupel*, Tupel>::iterator iter = (*data).end();
 	iter--;
 	unsigned int secsPerDay = 3600 * 24;
 	//TODO: Aktuellen Timespamt verwenden
