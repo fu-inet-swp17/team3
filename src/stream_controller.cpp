@@ -116,18 +116,11 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
             return Instruction::Ignore;
         }
 
-        // This is the first batch of updates after the RIB data
-        if (e.updates_processed == 0) {
-
-            if (p == BGP::Record::Position::Start) {
-                e.updates_processed++;
-                return Instruction::Apply;
-            } else
-                throw std::runtime_error("Unexpected non start update record");
-            
-        }
-
         e.updates_processed++;
+        
+        // This is the first batch of updates after the RIB data
+        if (e.updates_processed == 0)
+            return Instruction::Apply;
         
         if (p == BGP::Record::Position::End) {
 
