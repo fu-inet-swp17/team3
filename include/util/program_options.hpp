@@ -37,6 +37,8 @@ namespace util {
             desc.add_options()
                 // Help text
                 ("help,h", "This help text")
+                // Quiet option
+                ("quiet,q", "Quiet (do debug output)")
                 // Project filters
                 ("project,p", value<vector<string>>(),
                  "Filter records by project (e.g. routeviews, ris)*")
@@ -71,6 +73,10 @@ namespace util {
             }
         }
 
+        bool quiet(void) {
+            return (arguments.count("quiet"));
+        }
+        
         optional<vector<string>> project_filters(void) {
             if (arguments.count("project")) {
                 return arguments["project"].as<vector<string>>();
@@ -130,7 +136,7 @@ namespace util {
 
             return ret;
         }
-
+  
         // FIXME: Handle stoul exceptions. This should also happen at option parse time
         vector<interval> intervals(void) {
             auto ret = vector<interval>();
