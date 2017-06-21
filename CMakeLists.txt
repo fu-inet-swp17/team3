@@ -19,6 +19,9 @@ find_package(RTRLib REQUIRED)
 # find BGPStream library
 find_package(BGPStream REQUIRED)
 
+# Find ncurses
+find_package(Curses REQUIRED)
+
 # add bgpreadercpp executable
 add_executable(bgpreadercpp src/reader.cpp)
 target_include_directories(bgpreadercpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -28,6 +31,13 @@ target_link_libraries(bgpreadercpp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES}
 add_executable(fuzzbgp src/fuzzbgp.cpp src/prefix_store.cpp src/stream_controller.cpp)
 target_include_directories(fuzzbgp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(fuzzbgp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
+
+# add display executable
+add_executable(bgpdisplay
+  Display/src/BGPNcurses.cpp
+  Display/src/ncurses/ncursesFunctions.cpp
+  Display/src/ncurses/OutageData.cpp)
+target_link_libraries(bgpdisplay ${CURSES_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
 
 # add both bgpstream tutorial projects & rtrclient but exclude from 'make all'
 add_executable(bgpstream-tutorial misc/tutorials/bgpstream-tutorial.c)
