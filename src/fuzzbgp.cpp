@@ -7,6 +7,7 @@
 #include "stream_controller.hpp"
 #include "prefix_store.hpp"
 
+#include "util/formatters.hpp"
 #include "util/program_options.hpp"
 #include "util/stream_initializer.hpp"
 
@@ -35,7 +36,14 @@ int main(int argc, char** argv) {
     sc.start();
 
     // Stores the prefixes
-    PrefixStore pfx_store;
+    PrefixStore pfx_store([&](bgpstream_pfx_storage_t pfx, uint32_t origin, std::time_t timestamp, const std::list<bgpstream_pfx_storage_t>& lost) {
+            std::cout << timestamp << "|" << origin << "|" << lost.size() << "|";
+
+            for (const auto& pfx : lost) {
+                std::cout << util::format_prefix(pfx) << " ";
+            }
+            std::cout << std::endl;
+        });
 
     // Stats
     unsigned processed = 0, ignored = 0;
