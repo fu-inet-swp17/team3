@@ -17,11 +17,13 @@ using namespace util;
 void process_element(PrefixStore& pfx_store, unsigned collector, const BGP::Element& e);
 
 int main(int argc, char** argv) {
-    // Set log level
-    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
-
     // Parse command line (largely compatible to bgpreader)
     ProgramOptions opts(argc, argv);
+
+    if (opts.quiet())
+        boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::error);
+    else
+        boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
 
     // Exit if program options say so
     if (auto ret = opts.exit()) return *ret;
