@@ -11,7 +11,7 @@ find_package(Threads REQUIRED)
 
 # find boost library components
 add_definitions(-DBOOST_LOG_DYN_LINK)
-find_package(Boost 1.60 COMPONENTS log program_options REQUIRED)
+find_package(Boost 1.58 COMPONENTS log program_options REQUIRED)
 
 # find RTR library
 find_package(RTRLib REQUIRED)
