@@ -12,13 +12,15 @@ PrefixStore::PrefixStore(lost_prefix_cb_t&& cb) : lost_prefix_cb(cb) {
 void PrefixStore::flush(unsigned collector) {
     BOOST_LOG_TRIVIAL(info) << "Flushing collector #" << collector;
 
-    for (auto it = pfx_map.begin4(); it != pfx_map.end4(); it++) {
+    pfx_map.for_each([=](std::list<prefix_status>& l) {
 
-        std::remove_if((*it).second.begin(), (*it).second.end(),
-                       [=](const prefix_status v) {
-                           return (v.collector == collector);
-                       });
-    }
+            std::remove_if(l.begin(), l.end(),
+                           [=](const prefix_status v) {
+                               return (v.collector == collector);
+                           });
+
+            return 0;
+        });
 
     BOOST_LOG_TRIVIAL(info) << "Done";
 }
@@ -41,11 +43,9 @@ void PrefixStore::upsert_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, s
         m->origin = origin;
     }
 
-    auto& active = active_prefixes[origin];
     auto& lost = lost_prefixes[origin];
 
-    if (std::find(active.begin(), active.end(), pfx) == active.end()) {
-        active.push_back(pfx);
+    if (std::find(lost.begin(), lost.end(), pfx) == lost.end()) {
 
         auto rem = std::remove(lost.begin(), lost.end(), pfx);
 
@@ -55,7 +55,7 @@ void PrefixStore::upsert_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, s
             BOOST_LOG_TRIVIAL(info) << std::put_time(std::gmtime(&tm), "%F %T") << ": "
                                     << "AS" << std::setw(10) << std::left << origin << " RECOV "
                                     << format_prefix(pfx) << " "
-                                    << "(" << active.size() << " left, " << lost.size() << " lost)";
+                                    << "(" << lost.size() << " lost)";
         }
     }
 }
@@ -72,8 +72,9 @@ void PrefixStore::delete_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, s
 
         // Look if matching prefix_status exists
         auto m = std::find_if(l.begin(), l.end(),
-                              [&](const prefix_status v) {
-                                  return ((v.vp == vp) && (v.collector == collector));
+                              [=](const prefix_status v) {
+                                  return ((v.vp == vp) &&
+                                          (v.collector == collector));
                               });
 
         if (m == l.end()) {
@@ -96,34 +97,47 @@ void PrefixStore::delete_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, s
 
             if (l.empty()) {
 
-                auto& active = active_prefixes[origin];
-                auto& lost = lost_prefixes[origin];
+                if (pfx.address.version == BGPSTREAM_ADDR_VERSION_IPV4) {
 
-                auto del = std::remove(active.begin(), active.end(), pfx);
+                    prefix::ipv4_key_t in(pfx);
 
-                if (del != active.end()) {
-                    lost.push_back(pfx);
-                    active.erase(del, active.end());
-                }
+                    bool has_outer = pfx_map.super_prefixes(in, [=] (const prefix::ipv4_key_t& p, std::list<prefix_status>& l) {
 
-                auto outer = std::find_if(active.begin(), active.end(),
-                                          [&] (const bgpstream_pfx_storage_t other) {
+                            auto outer = std::find_if(l.begin(), l.end(),
+                                                      [=](const prefix_status v) {
+                                                          return ((v.vp == vp) &&
+                                                                  (v.origin == origin) &&
+                                                                  (v.collector == collector));
+                                                      });
 
-                                              return (bgpstream_pfx_contains((bgpstream_pfx_t *)&other,
-                                                                             (bgpstream_pfx_t *)&pfx) != 0);
-                                          });
+                            if (outer != l.end()) {
+                                std::cout << in << " still reachable through " << p << std::endl;
+                                return 1;
+                            } else {
+                                return 0;
+                            }
+                        });
 
-                // No containing prefix found
-                if (outer == active.end()) {
+                    if (!has_outer) {
+                        lost_prefixes[origin].push_back(pfx);
+                        
+                        BOOST_LOG_TRIVIAL(info) << std::put_time(std::gmtime(&tm), "%F %T") << ": "
+                                                << "AS" << std::setw(10) << std::left << origin << " LOST  "
+                                                << format_prefix(pfx) << " "
+                                                << "(" << lost_prefixes[origin].size() << " lost)";
 
-                    BOOST_LOG_TRIVIAL(info) << std::put_time(std::gmtime(&tm), "%F %T") << ": "
-                                            << "AS" << std::setw(10) << std::left << origin << " LOST  "
-                                            << format_prefix(pfx) << " "
-                                            << "(" << active.size() << " left, " << lost.size() << " lost)";
-
-                    if (active.size() == 0) {
-                        lost_prefix_cb(pfx, origin, tm, lost);
+                        for (auto p : lost_prefixes[origin]) {
+                            std::cout << "  - " << format_prefix(p) << std::endl;
+                        }
+                        // if (active.size() == 0) {
+                        //     lost_prefix_cb(pfx, origin, tm, lost);
+                        // }
                     }
+
+                } else {
+
+                    /* IPv6 not implemented yet */
+                    
                 }
             }
         }
