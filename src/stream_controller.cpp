@@ -33,13 +33,17 @@ StreamController::StreamController(BGP::Stream&& s) : stream(std::move(s)) { /* 
 
 void StreamController::start(void) {
     stream.start();
-}
 
-std::pair<StreamController::Instruction, unsigned> StreamController::next(BGP::Record& r) {
-    if (stream.next(r))
-        return handle(r);
-    else
-        throw std::runtime_error("End of Stream");
+    unsigned collector;
+    bool op;
+
+    while (stream.next(record)) {
+
+        std::tie(op, collector) = handle(record);
+
+        if (op)
+            next_fn(collector, record);
+    }
 }
 
 void StreamController::print(void) const {
@@ -52,7 +56,7 @@ void StreamController::print(void) const {
     }
 }
 
-StreamController::Instruction StreamController::update(const BGP::Record& r, collector_entry& e) {
+bool StreamController::update(const BGP::Record& r, collector_entry& e) {
 
     const auto t = r.dump_type();
     const auto p = r.position();
@@ -70,7 +74,9 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
 
                 BOOST_LOG_TRIVIAL(info) << "starting RIB import for collector '" << e.name << "'";
 
-                return Instruction::Flush;
+                begin_rib_fn(0);
+
+                return true;
             }
 
             else {
@@ -81,7 +87,7 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
         else if (p == BGP::Record::Position::Middle) {
 
             if ((e.rib_time == r.dump_time())) {
-                return Instruction::Process;
+                return true;
             } else
                 throw std::runtime_error("Unexpected middle RIB record");
         }
@@ -93,13 +99,16 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
 
                 BOOST_LOG_TRIVIAL(info) << "completing RIB import for collector '" << e.name << "'";
 
-                return Instruction::Process;
+                return true;
+
             } else
+
                 throw std::runtime_error("Unexpected End RIB record");
         }
 
         else
             throw std::runtime_error("Invalid RIB record position");
+
     }
 
     else if (t == BGP::Record::DumpType::Update) {
@@ -107,21 +116,20 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
         // If no RIB has ever been received, ignore updates
         if (!e.rib_time) {
             e.updates_ignored++;
-            return Instruction::Ignore;
+            return false;
         }
 
         // If we are currently reading RIB data, ignore updates
         else if (e.in_rib) {
             e.updates_ignored++;
-            return Instruction::Ignore;
+            return false;
         }
 
-        e.updates_processed++;
-        
         // This is the first batch of updates after the RIB data
-        if (e.updates_processed == 0)
-            return Instruction::Apply;
-        
+        if (e.updates_processed++ == 0) {
+            begin_updates_fn(0);
+        }
+
         if (p == BGP::Record::Position::End) {
 
             if (e.last_update_dump < r.dump_time())
@@ -132,14 +140,14 @@ StreamController::Instruction StreamController::update(const BGP::Record& r, col
 
         e.last_update_record = r.record_time();
 
-        return Instruction::Process;
+        return true;
     }
 
     else
         throw std::runtime_error("Invalid DumpType");
 }
 
-std::pair<StreamController::Instruction, unsigned> StreamController::handle(const BGP::Record& r) {
+std::pair<bool, unsigned> StreamController::handle(const BGP::Record& r) {
 
     const auto name = r.collector();
 
