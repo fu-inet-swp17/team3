@@ -5,8 +5,12 @@
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 #include "bgpstream.h"
 #include "rtrlib/rtrlib.h"
+
+#define IP4_BITS 32
+#define IP4_MAX 1U << (IP4_BITS - 1)   // unsigned INT_MAX + 1
 
 uint32_t last_elem_timestamp = 0;
 uint32_t last_print_timestamp = 0;
@@ -63,6 +67,63 @@ void add_asn(asn_array *a, int bad_asn)
     a->asn[a->used] = bad_asn;
     a->invalid_updates[a->used++] = 1;
   }
+}
+
+/* Convert IPv4 address to host byte order */
+in_addr_t ip4_to_hbo(char *cp)
+{
+  struct in_addr in;
+  inet_aton(cp, &in);
+  return(ntohl(in.s_addr));
+}
+
+/* Tree for IPv4 pfx */
+typedef struct ip4_tree
+{
+  bool leaf;
+  bool digit;
+  int mask_len;
+  int asn;
+  struct ip4_tree *left;
+  struct ip4_tree *right;
+} ip4_tree;
+ip4_tree *ip4_t;
+
+void add_node(ip4_tree **node, bool digit, bool leaf)
+{
+  (*node) = malloc(sizeof(ip4_tree));
+  (*node)->digit = digit;
+  (*node)->left = 0;
+  (*node)->right = 0;
+}
+
+/* Add IPv4 pfx */
+void pfx_to_ip4_tree(ip4_tree **par, int asn, in_addr_t addr, int mask_len)
+{
+  int d = 0;
+  if(!(*par)) {
+    add_node(par, 0, true);
+  }
+  ip4_tree *pos = *par;
+  int i;
+  for(i=0; i<IP4_BITS; i++) {
+    d = (IP4_MAX >> i) & addr;
+    if(d) {
+      if(!(pos->right)) {
+        add_node(&(pos->right), 1, true);
+      }
+      pos->leaf = false;
+      pos = pos->right;
+    } else {
+      if(!(pos->left)) {
+        add_node(&(pos->left), 0, true);
+      }
+      pos->leaf = false;
+      pos = pos->left;
+    }
+  }
+  pos->asn = asn;
+  pos->mask_len = mask_len;
 }
 
 /* Print: <valid>|<invalid>|<not found>|<AS #1>|<AS #1 updates>|<AS #2>|... */
@@ -140,6 +201,7 @@ int main(int argc, const char **argv)
   bgpstream_as_path_seg_t *seg = NULL;
   int elem_counter = 0;
   int elem_invalid_counter = 0;
+  char ip_str[40];
   char buffer[2048];  // 1024 is not enough in some cases
   char collector[10] = "rrc00";
   char file_url[80];
@@ -234,8 +296,8 @@ int main(int argc, const char **argv)
         /* Select only announcements */
         if (elem->type == BGPSTREAM_ELEM_TYPE_ANNOUNCEMENT) {
           /* Address */
-          bgpstream_addr_ntop(buffer, 40, &(elem->prefix.address));
-          lrtr_ip_str_to_addr(buffer, &pref);
+          bgpstream_addr_ntop(ip_str, 40, &(elem->prefix.address));
+          lrtr_ip_str_to_addr(ip_str, &pref);
           /* Origin AS */
           seg = bgpstream_as_path_get_origin_seg(elem->aspath);
           bgpstream_as_path_seg_snprintf(buffer, 8, seg);
@@ -243,6 +305,12 @@ int main(int argc, const char **argv)
           rtr_mgr_validate(
             conf, atoi(buffer), &pref, elem->prefix.mask_len, &result
           );
+          /* Add to tree */
+          if(elem->prefix.address.version == BGPSTREAM_ADDR_VERSION_IPV4) {
+            pfx_to_ip4_tree(
+              &ip4_t, atoi(buffer), ip4_to_hbo(ip_str), elem->prefix.mask_len
+            );
+          }
           elem_counter++;
           lrtr_ip_addr_to_str(&pref, rtr_buffer, sizeof(rtr_buffer));
           last_elem_timestamp = elem->timestamp;
@@ -303,9 +371,9 @@ int main(int argc, const char **argv)
         /* Prefix */
         //bgpstream_pfx_snprintf(buffer, 1024, (bgpstream_pfx_t *)&(elem->prefix));
         /* Address */
-        bgpstream_addr_ntop(buffer, 40, &(elem->prefix.address));
+        bgpstream_addr_ntop(ip_str, 40, &(elem->prefix.address));
         //fprintf(stdout, "%s\n", buffer);
-        lrtr_ip_str_to_addr(buffer, &pref);
+        lrtr_ip_str_to_addr(ip_str, &pref);
         /* Mask length */
         //fprintf(stdout, "%d\n", elem->prefix.mask_len);
         /* Origin AS */
@@ -316,6 +384,12 @@ int main(int argc, const char **argv)
         rtr_mgr_validate(
           conf, atoi(buffer), &pref, elem->prefix.mask_len, &result
         );
+        /* Add to tree */
+        if(elem->prefix.address.version == BGPSTREAM_ADDR_VERSION_IPV4) {
+          pfx_to_ip4_tree(
+            &ip4_t, atoi(buffer), ip4_to_hbo(ip_str), elem->prefix.mask_len
+          );
+        }
         elem_counter++;
         lrtr_ip_addr_to_str(&pref, rtr_buffer, sizeof(rtr_buffer));
         last_elem_timestamp = elem->timestamp;
