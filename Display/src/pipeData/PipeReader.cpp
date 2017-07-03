@@ -83,6 +83,7 @@ void PipeReader::readInformationFromLine(int diagram, std::string line) {
 }
 
 int PipeReader::startListener() {
+	NcursesFunctions::initialise();
 	boost::thread t(&PipeReader::run, this);
 	return 0;
 }

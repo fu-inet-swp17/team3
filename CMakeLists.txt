@@ -34,7 +34,14 @@ target_link_libraries(fuzzbgp ${LIBBGPSTREAM_LIBRARIES} ${RTRLIB_LIBRARIES} ${Bo
 
 # add display executable
 add_executable(bgpdisplay
-  Display/src/BGPNcurses.cpp
+  Display/src/Display.cpp
+  Display/src/constants/Enums.hpp
+  Display/src/pipeData/PipeReader.cpp
+  Display/src/pipeData/DiagrammData.hpp
+  Display/src/pipeData/DiagrammData.cpp
+  Display/src/pipeData/ASObject.cpp
+  Display/src/pipeData/ASObject.hpp
+  Display/src/pipeData/PipeReader.hpp
   Display/src/ncurses/ncursesFunctions.cpp
   Display/src/ncurses/OutageData.cpp)
 target_link_libraries(bgpdisplay ${CURSES_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
