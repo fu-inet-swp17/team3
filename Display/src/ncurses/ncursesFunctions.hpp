@@ -9,13 +9,11 @@
 #include <set>
 #include <ncurses.h>
 #include <string>
-#include "OutageData.hpp"
+#include "../constants/Enums.hpp"
+#include "../pipeData/DiagrammData.hpp"
 
 #ifndef NCURSESFUNCTIONS_HPP_
 #define NCURSESFUNCTIONS_HPP_
-
-enum DiagrammTyp {BALKEN, KURVE, KURVEINTERPOLIERT};
-
 
 
 class NcursesFunctions{
@@ -30,21 +28,14 @@ private:
 	volatile bool *closeB;
 
 public:
-	int printScreen();
-	void initialise(volatile bool *close);
 	void close();
+	void static initialise();
 	NcursesFunctions(void);
 	~NcursesFunctions(void);
-	void printDiagramm(WINDOW *win, std::string *yAchse, std::string *xAchse, std::string *diagrammName, std::multiset<const Tupel*, Tupel> *data, DiagrammTyp typ, int color);
-	void read();
-	void setBool(volatile bool *close);
+	void printDiagramm(WINDOW *win, std::string yAchse, std::string xAchse, std::string diagrammName, DiagrammData data, DiagrammTyp typ, int color);
 
 private:
-	int printOptionsMenu(void);
-	int printMainScreen();
-	int printSourceMenu();
-	int switchScreen(void);
-	int printDiagram2(WINDOW *win, std::string *yAchse, std::string *xAchse, std::string *diagrammName, int *array, int length, DiagrammTyp typ, int color);
+	int printDiagram2(WINDOW *win, std::string yAchse, std::string xAchse, std::string diagrammName, int *array, int length, DiagrammTyp typ, int color);
 };
 
 
