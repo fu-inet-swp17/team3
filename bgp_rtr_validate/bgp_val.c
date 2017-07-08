@@ -1,5 +1,8 @@
 /* compile and link: gcc <program file> -lpthread -lbgpstream -lrtr */
 
+/* For Debian/Ubuntu:                                      */
+/* export LD_LIBRARY_PATH=/usr/local/lib/x86_64-linux-gnu/ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -192,7 +195,7 @@ void *print_thread()
   return 0;
 }
 
-int main(int argc, const char **argv)
+int main(int argc, char **argv)
 {
   /* Allocate memory for bgpstream */
   bgpstream_t *bs = bgpstream_create();
@@ -203,8 +206,7 @@ int main(int argc, const char **argv)
   int elem_counter = 0;
   int elem_invalid_counter = 0;
   char ip_str[40];
-  char buffer[2048];  // 1024 is not enough in some cases
-  char collector[10] = "rrc00";
+  char buffer[10];
   char file_url[80];
   char rtr_buffer[INET_ADDRSTRLEN];
   
@@ -259,29 +261,37 @@ int main(int argc, const char **argv)
   
   /* Get current date and time */
   time_t now = time(NULL);
-  time_t upd_file = now - now % 86400;
+  time_t rib_file = now - now % 28800;
   struct tm *timestamp;
   char year_month[10];
   char ymd_time[20];
-  timestamp = gmtime(&upd_file);
+  timestamp = gmtime(&rib_file);
   strftime(year_month, 10, "%Y.%m", timestamp);
   
-  /* Read the update files */
+  /* Read the RIB file */
   bgpstream_set_data_interface(bs, BGPSTREAM_DATA_INTERFACE_SINGLEFILE);
   option = bgpstream_get_data_interface_option_by_name(
-    bs, BGPSTREAM_DATA_INTERFACE_SINGLEFILE, "upd-file"
+    bs, BGPSTREAM_DATA_INTERFACE_SINGLEFILE, "rib-file"
   );
-  bgpstream_add_interval_filter(bs, (uint32_t)upd_file, (uint32_t)(upd_file+86400));
+  bgpstream_add_interval_filter(bs, (uint32_t)rib_file, (uint32_t)(rib_file+28800));
+  bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_PROJECT, "ris");
+  bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_PROJECT, "routeviews");
   int i;
-  for(i=now-now%86400; i<now-now%300-300; i+=300) {
-    upd_file = (time_t)i;
-    timestamp = gmtime(&upd_file);
+  for(i=1; i<argc; i++) {
+    bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, argv[i]);
+  }
+  //bgpstream_add_rib_period_filter(bs, 3600);
+  bgpstream_add_rib_period_filter(bs, 28800);
+  bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_RECORD_TYPE, "ribs");
+
+  for(i=1; i<argc; i++) {
+    timestamp = gmtime(&rib_file);
     strftime(ymd_time, 20, "%Y%m%d.%H%M", timestamp);
     strcpy(file_url, "http://data.ris.ripe.net/");
-    strcat(file_url, collector);
+    strcat(file_url, argv[i]);
     strcat(file_url, "/");
     strcat(file_url, year_month);
-    strcat(file_url, "/updates.");
+    strcat(file_url, "/bview.");
     strcat(file_url, ymd_time);
     strcat(file_url, ".gz");
     bgpstream_set_data_interface_option(bs, option, file_url);
@@ -295,7 +305,7 @@ int main(int argc, const char **argv)
       /* Extract elems from the current record */
       while ((elem = bgpstream_record_get_next_elem(record)) != NULL) {
         /* Select only announcements */
-        if (elem->type == BGPSTREAM_ELEM_TYPE_ANNOUNCEMENT) {
+        if (elem->type == BGPSTREAM_ELEM_TYPE_RIB) {
           /* Address */
           bgpstream_addr_ntop(ip_str, 40, &(elem->prefix.address));
           lrtr_ip_str_to_addr(ip_str, &pref);
@@ -330,6 +340,7 @@ int main(int argc, const char **argv)
               break;
           }
           new_data = true;
+          //printf("%d|%d\n", elem_counter, elem_invalid_counter);
         }
       }
     }
@@ -346,12 +357,12 @@ int main(int argc, const char **argv)
   bgpstream_set_data_interface(bs, BGPSTREAM_DATA_INTERFACE_BROKER);
   
   /* Set metadata filters */
-  bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, collector);
+  for(i=1; i<argc; i++) {
+    bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, argv[i]);
+  }
   bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views2");
   bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_RECORD_TYPE, "updates");
-  //bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_RECORD_TYPE, "ribs");
-  //bgpstream_add_rib_period_filter(bs, 3600);
-  bgpstream_add_interval_filter(bs, (uint32_t)time(NULL)-300, BGPSTREAM_FOREVER);
+  bgpstream_add_interval_filter(bs, (uint32_t)time(NULL), BGPSTREAM_FOREVER);
   
   /* Start the BGP stream */
   bgpstream_start(bs);
