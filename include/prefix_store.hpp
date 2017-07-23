@@ -22,6 +22,7 @@ private:
 
     prefix::split_map<std::list<prefix_status>> pfx_map;
 
+    std::map<std::uint32_t, std::list<bgpstream_pfx_storage_t>> active_prefixes;
     std::map<std::uint32_t, std::list<bgpstream_pfx_storage_t>> lost_prefixes;
 
     void upsert_status(bgpstream_pfx_storage_t pfx, std::uint32_t vp, std::uint32_t origin, std::uint32_t collector, std::time_t tm);
