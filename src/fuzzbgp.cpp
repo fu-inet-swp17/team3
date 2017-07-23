@@ -32,6 +32,9 @@ int main(int argc, char** argv) {
     // Construct StreamController from BGP::Stream defined by program options
     StreamController sc(stream_from_options(opts));
 
+    // Start stream controller
+    sc.start();
+
     // Stores the prefixes
     PrefixStore pfx_store([&](bgpstream_pfx_storage_t pfx, uint32_t origin, std::time_t timestamp, const std::list<bgpstream_pfx_storage_t>& lost) {
             std::cout << timestamp << "|" << origin << "|" << lost.size() << "|";
@@ -42,28 +45,45 @@ int main(int argc, char** argv) {
             std::cout << std::endl;
         });
 
-    sc.on_rib_begin([&] (auto c) {
-            std::cout << "Starting RIB import on collector " << c << std::endl;
-            pfx_store.flush(c);
-            return 0;
-        });
+    // Stats
+    unsigned processed = 0, ignored = 0;
 
-    sc.on_updates_begin([&] (auto c) {
-            std::cout << "Starting to apply updates on collector " << c << std::endl;
-            return 0;
-        });
+    // Reused per loop
+    BGP::Record r;
 
-    sc.on_next([&](auto collector, auto& r) {
+    // Ignore / Flush / Process for each Record
+    StreamController::Instruction op;
 
-            // Loop through individual BGP::Elements and process
-            for (const auto& e : r)
-                process_element(pfx_store, collector, e);
+    // Numerical identifier for the collector
+    unsigned collector;
 
-            return 0;
-        });
+    while (true) {
 
-    // Start stream controller
-    sc.start();
+        // Get instruction & collector number
+        std::tie(op, collector) = sc.next(r);
+
+        switch (op) {
+            case StreamController::Instruction::Ignore:
+                ignored++;
+                break;
+
+            case StreamController::Instruction::Flush:
+                pfx_store.flush(collector);
+
+            case StreamController::Instruction::Apply:
+            case StreamController::Instruction::Process:
+                processed++;
+
+                // Loop through individual BGP::Elements and process
+                for (const auto& e : r)
+                    process_element(pfx_store, collector, e);
+        }
+
+        // Print stats every 10 000 records
+        if (!((processed + ignored) % 10000)) {
+            BOOST_LOG_TRIVIAL(info) << processed << " records processed (" << ignored << " ignored)";
+        }
+    }
 
     return 0;
 }
