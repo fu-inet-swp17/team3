@@ -340,7 +340,6 @@ int main(int argc, char **argv)
               break;
           }
           new_data = true;
-          //printf("%d|%d\n", elem_counter, elem_invalid_counter);
         }
       }
     }
@@ -362,7 +361,7 @@ int main(int argc, char **argv)
   }
   bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_COLLECTOR, "route-views2");
   bgpstream_add_filter(bs, BGPSTREAM_FILTER_TYPE_RECORD_TYPE, "updates");
-  bgpstream_add_interval_filter(bs, (uint32_t)time(NULL), BGPSTREAM_FOREVER);
+  bgpstream_add_interval_filter(bs, (uint32_t)rib_file, BGPSTREAM_FOREVER);
   
   /* Start the BGP stream */
   bgpstream_start(bs);
