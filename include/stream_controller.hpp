@@ -9,8 +9,20 @@
 
 class StreamController {
 
-    typedef std::function<int(unsigned)> status_fn;
-    typedef std::function<int(unsigned, BGP::Record&)> consumer_fn;
+public:
+
+    enum class Instruction {
+        // Record contains updates for which we don't have RIBs yet -> ignore
+        Ignore,
+        // This record contains RIBs after an update period -> flush existing routes
+        Flush,
+        // This record contains Updates after reading RIB data -> apply
+        Apply,
+        // This record contains RIBs or updates -> process
+        Process
+    };
+
+private:
 
     struct collector_entry {
         std::string name;
@@ -31,48 +43,22 @@ class StreamController {
     };
 
     std::vector<collector_entry> log;
-
     BGP::Stream stream;
-    BGP::Record record;
 
-    bool update(const BGP::Record& r, collector_entry& e);
+    Instruction update(const BGP::Record& r, collector_entry& e);
 
-    std::pair<bool, unsigned> handle(const BGP::Record& r);
-
-    status_fn begin_rib_fn = [] (auto c) {
-        BOOST_LOG_TRIVIAL(info) << "Default begin_rib_fn called for collector " << c << std::endl;
-        return 0;
-    };
-
-    status_fn begin_updates_fn = [] (auto c) {
-        BOOST_LOG_TRIVIAL(info) << "Default start_rib_fn called for collector " << c << std::endl;
-        return 0;
-    };
-
-    consumer_fn next_fn = [] (auto c, auto&) {
-        BOOST_LOG_TRIVIAL(info) << "Default next_fn called for collector " << c << std::endl;
-        return 0;
-    };
+    std::pair<Instruction, unsigned> handle(const BGP::Record& r);
 
 public:
 
     // Construct by moving BGP::Stream
     StreamController(BGP::Stream&& s);
 
-    void on_rib_begin(const status_fn& fn) {
-        begin_rib_fn = fn;
-    }
-
-    void on_updates_begin(const status_fn& fn) {
-        begin_updates_fn = fn;
-    }
-
-    void on_next(const consumer_fn& fn) {
-        next_fn = fn;
-    }
-
     // Start the encapsulated BGP::Stream
     void start(void);
+
+    // Fill next Record and receive pair of (Instruction, collector number)
+    std::pair<Instruction, unsigned> next(BGP::Record& r);
 
     // Print collector stats
     void print(void) const;
