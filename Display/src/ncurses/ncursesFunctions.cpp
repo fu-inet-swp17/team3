@@ -11,18 +11,16 @@
 #include <ctime>
 
 void NcursesFunctions::initialise() {
-        initscr(); /* Start curses mode */
-        raw(); /* Line buffering disabled */
-        keypad(stdscr, TRUE); /* We get F1, F2 etc.. */
-        noecho(); /* Don't echo() while we do getch */
-        start_color(); /* Start color */
+	initscr(); /* Start curses mode */
+	raw(); /* Line buffering disabled */
+	keypad(stdscr, TRUE); /* We get F1, F2 etc.. */
+	noecho(); /* Don't echo() while we do getch */
+	start_color(); /* Start color */
 }
-
 
 void NcursesFunctions::printDiagramm(WINDOW *win, std::string yAchse, std::string xAchse, std::string diagrammName, DiagrammData data, DiagrammTyp typ, int color) {
 	unsigned int x = 1;
 	unsigned int y = 1;
-	//TODO: window size
 
 	getmaxyx(win, y, x);
 	x -= 3;
@@ -31,18 +29,19 @@ void NcursesFunctions::printDiagramm(WINDOW *win, std::string yAchse, std::strin
 	int columnCount = x;
 
 	unsigned int secsPerDay = 3600 * 24;
-	//TODO: Aktuellen Timespamt verwenden
 
-	int *array = (int*) malloc(sizeof(int) * columnCount);
-
-	data.constractColumArray(array,columnCount, secsPerDay);
-
-	this->printDiagram2(win, yAchse, xAchse, diagrammName, array, columnCount, typ, color);
+	if (typ != TOPLIST) {
+		int *array = (int*) malloc(sizeof(int) * columnCount);
+		data.constractColumArray(array, columnCount, secsPerDay);
+		this->printDiagram2(win, yAchse, xAchse, diagrammName, array, columnCount, typ, color);
+	} else {
+		this->printTopList(win,diagrammName,data);
+	}
 }
 int NcursesFunctions::printDiagram2(WINDOW *win, std::string yAchse, std::string xAchse, std::string diagrammName, int *array, int length, DiagrammTyp typ, int color) {
 	curs_set(0);
-	unsigned int x = 1;
-	unsigned int y = 1;
+	int x = 1;
+	int y = 1;
 	//TODO: window size
 
 	getmaxyx(win, y, x);
@@ -100,6 +99,7 @@ int NcursesFunctions::printDiagram2(WINDOW *win, std::string yAchse, std::string
 	if (prefixCountPerRow == 0) {
 		prefixCountPerRow = 1;
 	}
+
 	unsigned int lastValue = 0;
 	switch (typ) {
 	case KURVE:
@@ -151,6 +151,41 @@ int NcursesFunctions::printDiagram2(WINDOW *win, std::string yAchse, std::string
 	wattroff(win, COLOR_PAIR(color));
 	return 0;
 }
+
+int NcursesFunctions::printTopList(WINDOW* win, std::string name, DiagrammData data) {
+	int xAchse = 0, yAchse = 0;
+	getmaxyx(win, yAchse, xAchse);
+	std::vector<int> asList;
+	data.getASWithNumberInTopList(&asList);
+	if (yAchse - 2 < 1) {
+		return -1;
+	}
+	std::string diagramTitle;
+	diagramTitle += "Top ";
+	diagramTitle += std::to_string(asList.size());
+	diagramTitle += " ASList";
+	if (xAchse < diagramTitle.length()) {
+		return -1;
+	}
+	wmove(win,0,0);
+	wprintw(win,diagramTitle.c_str());
+	int line = 3;
+	for (std::vector<int>::iterator it = asList.begin(); it != asList.end(); it++, line++) {
+		if (line < xAchse) {
+			std::string entry;
+			entry += std::to_string(*it);
+			entry += " with ";
+			entry += std::to_string(data.getValueForAS(*it));
+			entry += " invalids.";
+			wmove(win,line,0);
+			wprintw(win,entry.c_str());
+		}else{
+			break;
+		}
+	}
+	return 0;
+}
+
 void NcursesFunctions::close() {
 }
 

@@ -36,6 +36,7 @@ public:
 
 private:
 	int printDiagram2(WINDOW *win, std::string yAchse, std::string xAchse, std::string diagrammName, int *array, int length, DiagrammTyp typ, int color);
+	int printTopList(WINDOW *win, std::string name, DiagrammData data);
 };
 
 

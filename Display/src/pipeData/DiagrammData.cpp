@@ -21,13 +21,6 @@ void DiagrammData::addTupel(int xValue, int yValue) {
 	this->yValue.push_back(yValue);
 }
 
-void DiagrammData::addLine(std::string line) {
-	this->line.push_back(line);
-}
-
-void DiagrammData::changeTopListElement(int asNumber, int value) {
-	//TODO:: ad some magic
-}
 
 void DiagrammData::constructASNames() {
 }
@@ -43,7 +36,7 @@ void DiagrammData::constractColumArray(int* array, int length, int timeoverall) 
 		firstxValue = 0;
 	}
 	int xValuePerColumn = timeoverall / length;
-	int count = 0;
+	unsigned int count = 0;
 	for (int i = 0; i < length; i++) {
 		array[i] = 0;
 	}
@@ -56,4 +49,25 @@ void DiagrammData::constractColumArray(int* array, int length, int timeoverall) 
 			count++;
 		}
 	}
+}
+
+void DiagrammData::addASToList(int as, int value) {
+	this->asList[as] += value;
+
+}
+
+void DiagrammData::getASWithNumberInTopList(std::vector<int> *asList) {
+	std::map<int,int> topList;
+	for (std::map<int,int>::iterator it=this->asList.begin(); it!=this->asList.end(); it++){
+		topList[this->asList[it->first]] = it->first;
+	}
+	for (std::map<int,int>::iterator it=--topList.end(); it!=topList.begin(); it--){
+		asList->push_back(topList[it->first]);
+	}
+	std::map<int,int>::iterator it=topList.begin();
+	asList->push_back(topList[it->first]);
+}
+
+int DiagrammData::getValueForAS(int as) {
+	return asList[as];
 }

@@ -30,15 +30,18 @@ private:
 	bool ignoreEOF;
 	std::vector<std::string> xAchsisName, yAchsisName, diagrammName;
 	std::vector<int> colors;
+	int colorcounter = 1;
+	std::map<std::string,WINDOW*> diagrams;
 
 
 public:
-	int addDiagramm(std::string formatter, int row, int column, int countRow, int countColumn, bool reverseXY, DiagrammTyp typ);
+	int addDiagramm(std::string formatter, int row, int column, int countRow, int countColumn, bool reverseXY, DiagrammTyp typ, NCURSES_COLOR_T color, std::string nameXAchse, std::string nameYAchse, std::string nameDiagram);
 	int startListener();
 
 private:
 	void run();
 	void readInformationFromLine(int position, std::string line);
+	void rekursiveTopListRead(std::string formatter, std::string line, int diagram);
 
 public:
 	PipeReader(std::string pipeName, bool ignoreEOF = false);
