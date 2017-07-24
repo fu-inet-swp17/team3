@@ -93,7 +93,7 @@ void PipeReader::readInformationFromLine(int diagram, std::string line) {
 	case TOPLIST:
 		char* regex1 = (char*) malloc(sizeof(char) * 255);
 		char* regex2 = (char*) malloc(sizeof(char) * 255);
-		sscanf(formatters[diagram].c_str(), "%s %s", regex1, regex2);
+		sscanf(formatters[diagram].c_str(), "%[^~]~%s", regex1, regex2);
 		char* tmp = (char*) malloc(sizeof(char) * 255);
 		sscanf(line.c_str(), regex1, tmp);
 		rekursiveTopListRead(std::string(regex2), std::string(tmp), diagram);
