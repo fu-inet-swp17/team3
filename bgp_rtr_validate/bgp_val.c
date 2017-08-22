@@ -206,7 +206,7 @@ int main(int argc, char **argv)
   int elem_counter = 0;
   int elem_invalid_counter = 0;
   char ip_str[40];
-  char buffer[10];
+  char buffer[80];
   char file_url[80];
   char rtr_buffer[INET_ADDRSTRLEN];
   
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
           lrtr_ip_str_to_addr(ip_str, &pref);
           /* Origin AS */
           seg = bgpstream_as_path_get_origin_seg(elem->aspath);
-          bgpstream_as_path_seg_snprintf(buffer, 8, seg);
+          bgpstream_as_path_seg_snprintf(buffer, 80, seg);
           /* Validate */
           rtr_mgr_validate(
             conf, atoi(buffer), &pref, elem->prefix.mask_len, &result
@@ -389,7 +389,7 @@ int main(int argc, char **argv)
         //fprintf(stdout, "%d\n", elem->prefix.mask_len);
         /* Origin AS */
         seg = bgpstream_as_path_get_origin_seg(elem->aspath);
-        bgpstream_as_path_seg_snprintf(buffer, 8, seg);
+        bgpstream_as_path_seg_snprintf(buffer, 80, seg);
         //fprintf(stdout, "%s\n", buffer);
         /* Validate */
         rtr_mgr_validate(

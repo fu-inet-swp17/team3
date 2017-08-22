@@ -22,6 +22,8 @@
 \documentclass[a0,portrait,posterdraft]{a0poster}
 \usepackage[top=1in, bottom=1.25in, left=1.25in, right=1.25in]{geometry}
 
+\pdfminorversion=4
+
 \usepackage{multicol} % This is so we can have multiple columns of text side-by-side
 \columnsep=100pt % This is the amount of white space between the columns in the poster
 \columnseprule=1.5pt % This is the thickness of the black line between the columns in the poster
@@ -69,7 +71,7 @@ innerrightmargin=16pt,innertopmargin=16pt,innerbottommargin=16pt,backgroundcolor
 % The widths of these boxes can be easily edited to accommodate your content as you see fit
 
 \begin{minipage}[b]{0.667\linewidth}
-\VeryHuge \textbf{Monitoring and\\Visualizing BGP data} \\[.6cm]
+\VeryHuge \textbf{Monitoring~and~Visualizing~BGP~Data} \\[.6cm]
 \huge \textbf{{A. Kurth, Y. Lewash, S. Sontberg}}\\[2.4cm] % Author(s)
 \Huge Project of Computer Systems and Telematics 2017\\[0.5cm] % Subtitle
 \huge M. Nawrocki, M. W\"ahlisch\\[0.5cm] % Subtitle
@@ -106,8 +108,8 @@ Systems (AS). ASes are collections of routers with a coherent routing policy
 controlled by a single administrative entity or domain (such as an Internet
 service provider (ISP), a university, or a large company) and represent
 connected groups of blocks of IP addresses, called IP prefixes. These IP address
-aggregations determine the common path to each contained IP address within
-these different networks.
+aggregations determine the common path to each contained IP address within the
+different networks.
 
 \begin{center}\vspace{1cm}
 \includegraphics[width=0.9\linewidth,interpolate]{20150711_coords}
@@ -132,9 +134,9 @@ are also used to withdraw old paths.
 
 \section*{Prefix Hijacking and Outages}
 However, any AS can also claim to own someone else's IP prefix and thereby
-create invalid routes, as happened in 2008 when Pakistan Telecom announced a
-prefix belonging to YouTube so that YouTube's traffic was hijacked on a global
-scale.
+create invalid routes, either by misconfiguration or attacks, as happened in
+2008 when Pakistan Telecom announced a prefix belonging to YouTube so that
+YouTube's traffic was hijacked on a global scale.
 
 \vfill
 \columnbreak
@@ -152,22 +154,24 @@ AS.
 reachability and therefore quite easy to detect, other types of hijacking might
 be even more serious than short outages. It is conceivable that the attacker
 successfully masquerades as the real prefix owner or forwards the hijacked
-traffic to the true destination while capturing all the transmitted data.
+traffic to the true destination while capturing all the transmitted data without
+letting the victims know their traffic was diverted.
 
 \section*{Securing BGP}
 
-Since BGP itself lacks protection against such attacks (or just
-configuration mistakes), the Internet Engineering Task Force (IETF) developed a
-Resource Certification (RPKI) to validate the prefix origin and secure this
-routing infrastructure. The holder of an address prefix can authorize ASes to
-rightfully originate a prefix. This way the prefix of each BGP update can be
-checked for origin validity before it is added to the route decision process.
+Since BGP itself lacks protection against such attacks (or just configuration
+mistakes), a Resource Certification (RPKI) was developed on top of open
+standards from the Internet Engineering Task Force (IETF) to validate the prefix
+origin and secure this routing infrastructure. The holder of an address space
+can authorize ASes to rightfully originate prefixes from this space so that the
+prefix of each BGP update can be verified for origin validity before it is added
+to the route decision process.
 
 \section*{BGP Data Collection}
 
 There are different projects that gather BGP data from locations around the
 world since 1997 and make it publicly available along with several tools to
-monitor this data almost in real-time, analyze the historic development, or
+monitor this data in almost real-time, analyze the historic development, or
 academic research. Measuring BGP data is important to gain understanding about
 structure and dynamics of the BGP ecosystem and the infrastructure of the
 Internet.
@@ -187,14 +191,14 @@ archives the collected data continuously.
 \section*{Monitoring BGP Traffic}
 
 With this data and tools available we can monitor and visualize BGP traffic with
-regard to origin and path changes, new prefix announcements, or withdrawals to
+regard to origin and path changes, new prefix announcements, or withdrawals and
 allow a better understanding of routing decisions and disruptions.
 
 \noindent In particular, using RPKI, it's possible to verify origins of IP
-prefixes and compile statistics on prefix hijacking or incorrectly
-configured attestations about authorized route announcements. Our tests have
-shown that today at least up to 10 percent of monitored prefixes in this manner
-can be validated with RPKI.
+prefixes and compile statistics on prefix hijacking or incorrectly configured
+attestations about authorized route announcements. Our tests have shown that
+today at least up to 10 percent of monitored prefixes with an upward trend in
+this manner can be validated with RPKI.
 
 \vfill
 

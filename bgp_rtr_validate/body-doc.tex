@@ -1,0 +1,196 @@
+\section{Introduction}
+The Internet is a web of thousands of interconnected networks, called
+Autonomous Systems (AS). ASes are collections of routers with a coherent
+routing policy controlled by a single administrative entity or domain
+(such as an Internet service provider, a university, or a large company)
+and represent connected groups of blocks of IP addresses, called IP
+prefixes. These IP address aggregations determine the common path to
+each contained IP address within the different networks.
+
+ASes use the Border Gateway Protocol (BGP) to establish connections
+between each other. With BGP update messages an AS can announce changes
+in the local database, advertise its IP prefix to neighboring ASes, and
+notify them of new ``best'' (e.g. shortest) routes to other ASes on the
+Internet. These updates are also used to withdraw old paths.
+
+\section{Analyzing BGP Traffic}
+There are different projects that gather BGP data from locations around
+the world since 1997 and make it publicly available along with several
+tools to monitor this data in almost real-time, analyze the historic
+development, or academic research. One of these tools is BGPStream, an
+open-source framework with C/C++ and Python APIs. BGPStream gathers BGP
+routing information some operators make publicly available from their
+routers such as University of Oregon's RouteViews and RIPE RIS.
+
+\subsection{Prefix Hijacking}
+Since BGP was developed without security concerns, any AS can also claim
+to own someone else’s IP prefix and thereby create invalid routes,
+either by misconfiguration or attacks. This can lead to hijacked traffic
+that is redirected to a wrong AS and causes outages this way, but also
+to maybe even more serious security concerns. It is conceivable that the
+attacker successfully masquerades as the real prefix owner or forwards
+the hijacked traffic to the true destination while capturing all the
+transmitted data without letting the victims know their traffic was
+diverted.
+
+\subsection{Origin Validation}
+To validate the prefix origin and secure the routing infrastructure from
+hijacking, a Resource Certification (RPKI) was developed on top of open
+standards from the Internet Engineering Task Force (IETF) for a
+validation of AS numbers and their IP prefixes against a trust anchor.
+The holder of an address space can authorize ASes to rightfully
+originate prefixes from this space so that the prefix of each BGP update
+can be verified for origin validity before it is added to the route
+decision process (e.g. rejection).
+
+The RTRlib is an implementation of the RPKI protocol. Together with an
+RPKI cache server it can be used to validate the ownership of IP
+prefixes with AS numbers.
+
+\section{Implementation}
+For better modularity and interchangeability the developed application
+is divided into independent back end and front end components connected
+by a Unix-like pipeline.
+
+\subsection{Back End}
+The back end is the main part. It uses BGPStream to fetch the BGP data
+from the RouteView project as well as additional RIPE collectors that
+can be specified as parameters.
+
+Each record of the Routing Information Base (RIB) and BGP update is then
+passed to RTRlib for verification. Since a RIB file contains information
+about the complete network topology relevant to the router, first the
+most recent RIB file is analyzed as a single file in the Multi-Threaded
+Routing Toolkit (MRT) format (if collector specified), then BGPStream's
+data interface is switched to broker mode to process all updates
+announced since the creation of the RIB file and to continue with
+real-time processing after this. RIB and update dumps are generated
+every 8 hours and 5 minutes, respectively.
+
+Additionally, for future functionality each prefix is converted to an IP
+address in host byte order and saved bitwise indexed in a binary tree
+with the mask length and the AS it was announced by. This is currently
+available for IPv4 addresses only. It's cogitable to implement functions
+that could lookup if certain prefixes were already processed and check
+if they were advertised by the same or a different AS.
+
+\subsection{Front End}
+The front end is written with ncurses for a text-based UI. It counts the
+processed updates, displays the time of the last update received, and
+draws a histogram with valid updates on a percentage basis for each
+5-minute interval. In the bottom screen area the UI also shows a table
+with the top 5 AS that produced the most invalid prefix announcements
+since first RIB file or update dump read. For this table a file
+maintained by Geoff Huston, Chief Scientist at the Asia Pacific Network
+Information Centre (APNIC), that maps each AS number to a more
+meaningful AS name, is retrieved via cURL.
+
+Figure~\ref{fig:output} shows a sample output approximately 90 minutes
+after the program was started. Since the front end should be replaced
+with another version, this behaves more like a demo than a real UI.
+
+\begin{figure}
+\scriptsize
+\begin{Verbatim}[frame=single]
+ Processed updates:                             Last update (est.):      
+            3921123                             Mon Jul  3 13:15:00 2017 
+                                                                         
+                                                                         
+         ^                                                               
+         |                                                               
+ % valid |      19 19 18                                                 
+ updates |17 16 ** ** ** 17 17 16 16 16 16 16 16 16                      
+         |** ** ** ** ** ** ** ** ** ** ** ** ** ** 15 15 15             
+         |** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **             
+         |** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **             
+         |** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **             
+         |** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **             
+         |** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **             
+         |** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **             
+         |** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **             
+         |=====|=====|=====|=====|=====|=====|=====|=====|=====>         
+              10    20    30    40    50    60    70    80    time (min) 
+                                                                         
+                                                                         
+ | Rank |            AS name            | Σ inv. upd | % of total inv. | 
+ |    1 | EARTHLINK-AS, IQ              |      10300 |  31 | ***       | 
+ |    2 | CAMNET-AS Telecom Cambodia, K |       3164 |   9 |           | 
+ |    3 | EVOWISE, RO                   |       2308 |   7 |           | 
+ |    4 | CDS-AS, UA                    |       2108 |   6 |           | 
+ |    5 | MOBILINK-AS-PK PMCL /LDI IP T |       1615 |   4 |           | 
+\end{Verbatim}
+\caption{A sample output of the ncurses front end.}
+\label{fig:output}
+\end{figure}
+
+\section{Results}
+The application can be used to gather different statistical data, e.g.
+the proportion of valid updates in the bar chart. As seen in
+figure~\ref{fig:output}, the rate there is already above 15 percent.
+However, the share depends on the specific time range. Also the rates
+are typically lower with RIB files. Table~\ref{tab:rrc} shows the
+differences in MRT elements of RIPE's Remote Route Collectors (RRCs) at
+the same particular time. The percentage of invalid updates is virtually
+equal among all RRCs.
+
+\begin{table}
+  \caption{MRT Records, 2017-07-01T00:00+00:00}
+  \label{tab:rrc}
+  \begin{tabular}{c|rrr|r|c}
+  \toprule
+  RRC&Valid&Invalid&Not in&Total&Inv.\\&&&RPKI&&in \%\\
+  \midrule
+  rrc00&\num{835187}&\num{68459}&\num{948935}&\num{10393481}&0.66\\
+  rrc01&\num{411349}&\num{33163}&\num{4614574}&\num{5059086}&0.66\\
+  rrc02&\multicolumn{4}{c|}{-- collector not used anymore --}&\\
+  rrc03&\num{495853}&\num{39312}&\num{5515779}&\num{6050944}&0.65\\
+  rrc04&\num{430055}&\num{37239}&\num{4894238}&\num{5361532}&0.69\\
+  rrc05&\num{238962}&\num{19692}&\num{2679983}&\num{2938637}&0.67\\
+  rrc06&\num{110778}&\num{9111}&\num{1268951}&\num{1388840}&0.66\\
+  rrc07&\num{290481}&\num{23758}&\num{3280778}&\num{3595017}&0.66\\
+  rrc08&\multicolumn{4}{c|}{-- collector not used anymore --}&\\
+  rrc09&\multicolumn{4}{c|}{-- collector not used anymore --}&\\
+  rrc10&\num{515789}&\num{42248}&\num{5910603}&\num{6468640}&0.65\\
+  rrc11&\num{499675}&\num{41722}&\num{5742000}&\num{6283397}&0.66\\
+  rrc12&\num{654993}&\num{54093}&\num{7258880}&\num{7967966}&0.68\\
+  rrc13&\num{533517}&\num{45437}&\num{6106805}&\num{6685759}&0.68\\
+  rrc14&\num{397131}&\num{32530}&\num{4537170}&\num{4966831}&0.65\\
+  rrc15&\num{768287}&\num{62699}&\num{9111875}&\num{9942861}&0.63\\
+  rrc16&\num{122493}&\num{9991}&\num{1406753}&\num{1539237}&0.65\\
+  rrc17&\multicolumn{4}{c|}{-- no information available --}&\\
+  rrc18&\num{105533}&\num{9266}&\num{1213851}&\num{1328650}&0.70\\
+  rrc19&\num{364304}&\num{29661}&\num{4196387}&\num{4590352}&0.65\\
+  rrc20&\num{1053645}&\num{86577}&\num{12017313}&\num{13157535}&0.66\\
+  rrc21&\num{996652}&\num{80354}&\num{11266889}&\num{12343895}&0.65\\
+  \bottomrule
+  \end{tabular}
+\end{table}
+
+When analyzing historical data, a slight increase of valid records (i.e.
+RPKI usage) can be noted in table~\ref{tab:hist}, although it's a
+subject to reservations since AS numbers and prefixes can be revoked or
+re-registered over time. Therefore, the real growth should be higher.
+
+\begin{table}
+  \caption{Temporal Development of RPKI Usage with RRC00 RIBs}
+  \label{tab:hist}
+  \begin{tabular}{c|rr|c}
+  \toprule
+  Date&Valid&Total&Valid in \%\\
+  \midrule
+  2012-01-01&\num{421480}&\num{6963682}&6.1\\
+  2012-07-01&\num{503910}&\num{7886356}&6.4\\
+  2013-01-01&\num{575155}&\num{8851617}&6.5\\
+  2013-07-01&\num{600118}&\num{8804669}&6.8\\
+  2014-01-01&\num{612287}&\num{8729153}&7.0\\
+  2014-07-01&\num{525832}&\num{7147361}&7.4\\
+  2015-01-01&\num{610066}&\num{7832287}&7.8\\
+  2015-07-01&\num{667992}&\num{8593325}&7.8\\
+  2016-01-01&\num{597405}&\num{7615228}&7.8\\
+  2016-07-01&\num{652962}&\num{8273659}&7.9\\
+  2017-01-01&\num{736358}&\num{9348547}&7.9\\
+  2017-07-01&\num{835187}&\num{10393481}&8.0\\
+  \bottomrule
+  \end{tabular}
+\end{table}
+
